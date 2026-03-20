@@ -9,10 +9,7 @@ export default function HUD({ level, topView, onToggleView, won }) {
           {topView ? '👁 FIRST PERSON' : '🗺 TOP VIEW'}
         </button>
       </div>
-      {!won && (
-        <div style={styles.crosshair}>+</div>
-      )}
-      <div style={styles.controls}>
+<div style={styles.controls}>
         WASD · MOVE &nbsp;|&nbsp; ←→ · TURN &nbsp;|&nbsp; MOUSE · LOOK &nbsp;|&nbsp; T · TOGGLE VIEW
       </div>
     </div>

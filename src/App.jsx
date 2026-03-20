@@ -29,35 +29,52 @@ export default function App() {
   const [game, setGame] = useState(() => newGame(0))
   const [topView, setTopView] = useState(false)
   const [won, setWon] = useState(false)
-  const [screen, setScreen] = useState('title') // 'title' | 'playing' | 'won'
+  const [screen, setScreen] = useState('title') // 'title' | 'countdown' | 'playing' | 'won'
+  const [countdown, setCountdown] = useState(0)
 
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.key === 't' || e.key === 'T') && screen === 'playing') {
+      if (e.code === 'KeyT' && screen === 'playing') {
         setTopView(v => !v)
+      }
+      if (e.code === 'Space' && screen === 'countdown') {
+        setTopView(false)
+        setScreen('playing')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [screen])
 
-  const startGame = useCallback(() => {
-    const g = newGame(0)
-    setLevel(0)
+  // Countdown timer
+  useEffect(() => {
+    if (screen !== 'countdown') return
+    if (countdown <= 0) {
+      setTopView(false)
+      setScreen('playing')
+      return
+    }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [screen, countdown])
+
+  const beginLevel = useCallback((lvl, g) => {
+    setLevel(lvl)
     setGame(g)
     setWon(false)
-    setTopView(false)
-    setScreen('playing')
+    setTopView(true)
+    setCountdown(10)
+    setScreen('countdown')
   }, [])
+
+  const startGame = useCallback(() => {
+    beginLevel(0, newGame(0))
+  }, [beginLevel])
 
   const nextLevel = useCallback(() => {
     const next = level + 1
-    setLevel(next)
-    setGame(newGame(next))
-    setWon(false)
-    setTopView(false)
-    setScreen('playing')
-  }, [level])
+    beginLevel(next, newGame(next))
+  }, [level, beginLevel])
 
   const handleWin = useCallback(() => {
     setWon(true)
@@ -100,6 +117,7 @@ export default function App() {
           topView={topView}
           onWin={handleWin}
           won={won}
+          frozen={screen === 'countdown'}
         />
       </Canvas>
 
@@ -109,6 +127,14 @@ export default function App() {
         onToggleView={() => setTopView(v => !v)}
         won={won}
       />
+
+      {screen === 'countdown' && (
+        <div style={styles.countdownOverlay}>
+          <div style={styles.countdownText}>MEMORIZE THE MAZE!</div>
+          <div style={styles.countdownNumber}>{countdown}</div>
+          <div style={styles.skipHint}>SPACE to skip</div>
+        </div>
+      )}
 
       {screen === 'won' && (
         <div style={styles.overlay}>
@@ -165,6 +191,38 @@ const styles = {
     background: '#0a0a0a',
     padding: '16px 24px',
     borderRadius: 4,
+  },
+  countdownOverlay: {
+    position: 'fixed',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    zIndex: 50,
+  },
+  countdownText: {
+    color: '#fff',
+    fontFamily: 'Courier New, monospace',
+    fontSize: 28,
+    letterSpacing: 4,
+    textShadow: '0 0 20px rgba(255,107,53,0.8)',
+    marginBottom: 16,
+  },
+  countdownNumber: {
+    color: '#ff6b35',
+    fontFamily: 'Courier New, monospace',
+    fontSize: 96,
+    fontWeight: 'bold',
+    textShadow: '0 0 40px rgba(255,107,53,0.6)',
+  },
+  skipHint: {
+    color: 'rgba(255,255,255,0.4)',
+    fontFamily: 'Courier New, monospace',
+    fontSize: 14,
+    marginTop: 20,
+    letterSpacing: 2,
   },
   btn: {
     background: '#ff6b35',
