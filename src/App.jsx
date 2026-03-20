@@ -142,7 +142,7 @@ export default function App() {
       {screen === 'won' && (
         <div style={styles.overlay}>
           <div style={styles.titleBox}>
-            <h1 style={{ ...styles.title, color: '#00ff88' }}>LEVEL {level + 1} COMPLETE!</h1>
+            <h1 style={{ ...styles.title, color: '#00ff88', fontSize: 'clamp(28px, 6vw, 64px)' }}>LEVEL {level + 1} COMPLETE!</h1>
             <p style={styles.subtitle}>You found the exit!</p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
               <button style={styles.btn} onClick={nextLevel}>NEXT LEVEL</button>
@@ -168,7 +168,7 @@ const styles = {
   titleBox: {
     textAlign: 'center',
     color: '#fff',
-    maxWidth: 420,
+    maxWidth: 520,
     padding: '40px 32px',
     border: '1px solid #333',
     borderRadius: 8,
