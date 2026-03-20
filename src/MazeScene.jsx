@@ -5,6 +5,22 @@ import * as THREE from 'three'
 import { Sky, Stars } from '@react-three/drei'
 import { getWallBoxes, CELL_SIZE, WALL_HEIGHT } from './maze'
 
+// Per-level wall themes: color, roughness, metalness, emissive tint
+const LEVEL_THEMES = [
+  { wall: '#5a6a8e', rough: 0.8, metal: 0.0, emissive: '#000000', floor: '#3a3a4e' }, // 0: stone blue
+  { wall: '#7a4a2a', rough: 0.9, metal: 0.0, emissive: '#110500', floor: '#4a3020' }, // 1: sandstone
+  { wall: '#2a6a4a', rough: 0.7, metal: 0.1, emissive: '#001a0a', floor: '#1a3a28' }, // 2: mossy dungeon
+  { wall: '#6a2a2a', rough: 0.6, metal: 0.2, emissive: '#1a0000', floor: '#3a1818' }, // 3: volcanic
+  { wall: '#3a3a6a', rough: 0.3, metal: 0.6, emissive: '#000010', floor: '#202040' }, // 4: metal fortress
+  { wall: '#5a3a7a', rough: 0.5, metal: 0.4, emissive: '#0a001a', floor: '#2a1a3a' }, // 5: arcane crystal
+  { wall: '#2a5a6a', rough: 0.4, metal: 0.5, emissive: '#001010', floor: '#162a30' }, // 6: ice cave
+  { wall: '#6a5a2a', rough: 0.8, metal: 0.1, emissive: '#100800', floor: '#3a3010' }, // 7: ancient ruins
+]
+
+function levelTheme(level) {
+  return LEVEL_THEMES[level % LEVEL_THEMES.length]
+}
+
 const PLAYER_SPEED = 5
 const TURN_SPEED = 2.5
 const PLAYER_RADIUS = 0.4
@@ -15,7 +31,8 @@ const CAM_BEHIND = 2.0
 const CAM_HEIGHT = 2.0
 const CAM_LERP = 5 // smoothing
 
-export default function MazeScene({ game, topView, onWin, won, frozen }) {
+export default function MazeScene({ game, level, topView, onWin, won, frozen }) {
+  const theme = levelTheme(level)
   const { camera, gl } = useThree()
   const keys = useKeyboardControls()
 
@@ -170,8 +187,8 @@ export default function MazeScene({ game, topView, onWin, won, frozen }) {
       <Sky sunPosition={[100, 20, 100]} turbidity={8} rayleigh={2} mieCoefficient={0.005} mieDirectionalG={0.8} />
       <Stars radius={100} depth={50} count={3000} factor={4} fade speed={1} />
 
-      <MazeFloor game={game} />
-      <MazeWalls wallBoxes={wallBoxes} />
+      <MazeFloor game={game} theme={theme} />
+      <MazeWalls wallBoxes={wallBoxes} theme={theme} />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       <KidCharacter playerPos={playerPos} yaw={yaw} isMoving={isMoving} />
@@ -465,13 +482,13 @@ function TreasureChest({ position }) {
 
 // ─── Other scene elements ───
 
-function MazeFloor({ game }) {
+function MazeFloor({ game, theme }) {
   const w = game.width * CELL_SIZE
   const h = game.height * CELL_SIZE
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]} receiveShadow>
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial color="#4a4a5e" roughness={0.8} />
+      <meshStandardMaterial color={theme.floor} roughness={0.9} />
     </mesh>
   )
 }
@@ -486,13 +503,13 @@ function PlayerLight({ playerPos }) {
   return <pointLight ref={ref} intensity={20} distance={25} color="#ffeedd" decay={2} />
 }
 
-function MazeWalls({ wallBoxes }) {
+function MazeWalls({ wallBoxes, theme }) {
   return (
     <>
       {wallBoxes.map((box, i) => (
         <mesh key={i} position={[box.cx, WALL_HEIGHT / 2, box.cz]} castShadow receiveShadow>
           <boxGeometry args={[box.width, WALL_HEIGHT, box.depth]} />
-          <meshStandardMaterial color="#5a6a8e" roughness={0.5} metalness={0.1} />
+          <meshStandardMaterial color={theme.wall} roughness={theme.rough} metalness={theme.metal} emissive={theme.emissive} />
         </mesh>
       ))}
     </>

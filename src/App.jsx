@@ -117,6 +117,7 @@ export default function App() {
       >
         <MazeScene
           game={game}
+          level={level}
           topView={topView}
           onWin={handleWin}
           won={won}
