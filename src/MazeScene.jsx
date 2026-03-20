@@ -127,6 +127,11 @@ export default function MazeScene({ game, topView, onWin, won, frozen }) {
         if (!collidesWithWall(pos.x, nz)) pos.z = nz
       }
 
+      // Clamp to maze bounds so player can't escape through entry/exit openings
+      const margin = PLAYER_RADIUS
+      pos.x = Math.max(margin, Math.min(game.width  * CELL_SIZE - margin, pos.x))
+      pos.z = Math.max(margin, Math.min(game.height * CELL_SIZE - margin, pos.z))
+
       // Third-person camera: behind and above the player
       camera.up.set(0, 1, 0)
       const idealX = pos.x + Math.sin(yaw.current) * CAM_BEHIND
