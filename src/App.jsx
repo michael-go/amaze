@@ -32,10 +32,22 @@ export default function App() {
   const [screen, setScreen] = useState('title') // 'title' | 'countdown' | 'playing' | 'won'
   const [countdown, setCountdown] = useState(0)
 
+  const beginLevel = useCallback((lvl, g) => {
+    setLevel(lvl)
+    setGame(g)
+    setWon(false)
+    setTopView(true)
+    setCountdown(10)
+    setScreen('countdown')
+  }, [])
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.code === 'KeyT' && screen === 'playing') {
         setTopView(v => !v)
+      }
+      if (e.code === 'Space' && screen === 'title') {
+        beginLevel(0, newGame(0))
       }
       if (e.code === 'Space' && screen === 'countdown') {
         setTopView(false)
@@ -44,7 +56,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [screen])
+  }, [screen, beginLevel])
 
   // Countdown timer
   useEffect(() => {
@@ -57,15 +69,6 @@ export default function App() {
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(timer)
   }, [screen, countdown])
-
-  const beginLevel = useCallback((lvl, g) => {
-    setLevel(lvl)
-    setGame(g)
-    setWon(false)
-    setTopView(true)
-    setCountdown(10)
-    setScreen('countdown')
-  }, [])
 
   const startGame = useCallback(() => {
     beginLevel(0, newGame(0))
