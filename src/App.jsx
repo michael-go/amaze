@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import MazeScene from './MazeScene'
 import HUD from './HUD'
+import QuizModal from './QuizModal'
 import { generateMaze, CELL_SIZE } from './maze'
 
 const MAZE_SIZES = [
@@ -31,6 +32,7 @@ export default function App() {
   const [won, setWon] = useState(false)
   const [screen, setScreen] = useState('title') // 'title' | 'countdown' | 'playing' | 'won'
   const [countdown, setCountdown] = useState(0)
+  const [quizAction, setQuizAction] = useState(null) // fn to run after quiz success
 
   const beginLevel = useCallback((lvl, g) => {
     setLevel(lvl)
@@ -44,7 +46,8 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.code === 'KeyT' && screen === 'playing') {
-        setTopView(v => !v)
+        if (topView) setTopView(false)
+        else setQuizAction(() => () => setTopView(true))
       }
       if (e.code === 'Space' && screen === 'title') {
         beginLevel(0, newGame(0))
@@ -56,7 +59,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [screen, beginLevel])
+  }, [screen, topView, beginLevel])
 
   // Countdown timer
   useEffect(() => {
@@ -128,9 +131,16 @@ export default function App() {
       <HUD
         level={level + 1}
         topView={topView}
-        onToggleView={() => setTopView(v => !v)}
+        onToggleView={() => topView ? setTopView(false) : setQuizAction(() => () => setTopView(true))}
         won={won}
       />
+
+      {quizAction && (
+        <QuizModal
+          onSuccess={() => { quizAction(); setQuizAction(null) }}
+          onCancel={() => setQuizAction(null)}
+        />
+      )}
 
       {screen === 'countdown' && (
         <div style={styles.countdownOverlay}>
