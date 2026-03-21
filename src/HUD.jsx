@@ -1,8 +1,19 @@
-export default function HUD({ level, topView, onToggleView, won }) {
+export default function HUD({ level, topView, onToggleView, won, stepsRemaining, maxSteps }) {
+  const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1
+  const barColor = pct > 0.6 ? '#44bb44' : pct > 0.35 ? '#ff6b35' : pct > 0.15 ? '#ffaa00' : '#ff2222'
+
   return (
     <div style={styles.hud}>
       <div style={styles.left}>
         <span style={styles.levelBadge}>LEVEL {level}</span>
+        {!won && (
+          <div style={styles.stepsBar}>
+            <div style={styles.stepsLabel}>🦶 STEPS</div>
+            <div style={styles.stepsTrack}>
+              <div style={{ ...styles.stepsFill, width: `${pct * 100}%`, background: barColor }} />
+            </div>
+          </div>
+        )}
       </div>
       <div style={styles.right}>
         <button style={styles.viewBtn} onClick={onToggleView}>
@@ -27,6 +38,9 @@ const styles = {
     position: 'absolute',
     top: 16,
     left: 20,
+    background: 'rgba(0,0,0,0.45)',
+    padding: '10px 16px',
+    borderRadius: 8,
   },
   right: {
     position: 'absolute',
@@ -43,7 +57,7 @@ const styles = {
     textShadow: '0 0 10px #ff6b35',
   },
   viewBtn: {
-    background: 'rgba(0,0,0,0.6)',
+    background: 'rgba(0,0,0,0.45)',
     color: '#fff',
     border: '1px solid #444',
     padding: '8px 16px',
@@ -62,6 +76,28 @@ const styles = {
     fontSize: 24,
     fontWeight: 'bold',
     lineHeight: 1,
+  },
+  stepsBar: {
+    marginTop: 12,
+  },
+  stepsLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: 'Courier New, monospace',
+    fontSize: 13,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  stepsTrack: {
+    width: 160,
+    height: 14,
+    background: 'rgba(255,255,255,0.1)',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  stepsFill: {
+    height: '100%',
+    borderRadius: 5,
+    transition: 'width 0.3s ease, background 0.3s ease',
   },
   controls: {
     position: 'absolute',

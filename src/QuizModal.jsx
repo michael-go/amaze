@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateQuestion } from './quiz'
 
-export default function QuizModal({ onSuccess, onCancel }) {
+export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
   const [question] = useState(() => generateQuestion())
   const [input, setInput] = useState('')
   const [shake, setShake] = useState(false)
@@ -11,6 +11,7 @@ export default function QuizModal({ onSuccess, onCancel }) {
   useEffect(() => { inputRef.current?.focus() }, [])
 
   useEffect(() => {
+    if (!onCancel) return
     const onKey = (e) => { if (e.code === 'Escape') onCancel() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -29,12 +30,13 @@ export default function QuizModal({ onSuccess, onCancel }) {
 
   function onKeyDown(e) {
     if (e.key === 'Enter') submit()
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault()
   }
 
   return (
     <div style={styles.backdrop}>
       <div style={{ ...styles.box, animation: shake ? 'shake 0.45s ease' : 'none' }}>
-        <div style={styles.prompt}>🗺️ Unlock the map!</div>
+        <div style={styles.prompt}>{promptText || '🗺️ Unlock the map!'}</div>
         <div style={styles.question}>{question.text} = ?</div>
         {wrong && <div style={styles.wrong}>Not quite — try again!</div>}
         <input
@@ -48,7 +50,7 @@ export default function QuizModal({ onSuccess, onCancel }) {
         />
         <div style={styles.buttons}>
           <button style={styles.btn} onClick={submit}>CHECK</button>
-          <button style={{ ...styles.btn, ...styles.cancelBtn }} onClick={onCancel}>CANCEL</button>
+          {onCancel && <button style={{ ...styles.btn, ...styles.cancelBtn }} onClick={onCancel}>CANCEL</button>}
         </div>
       </div>
       <style>{`

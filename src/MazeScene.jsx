@@ -208,7 +208,7 @@ const CAM_BEHIND = 2.0
 const CAM_HEIGHT = 2.0
 const CAM_LERP = 5 // smoothing
 
-export default function MazeScene({ game, level, topView, onWin, won, frozen }) {
+export default function MazeScene({ game, level, topView, onWin, won, frozen, onStepUsed }) {
   const theme = levelTheme(level)
   const { camera, gl } = useThree()
   const keys = useKeyboardControls()
@@ -218,6 +218,7 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen }) 
   const pitch = useRef(0)
   const isMoving = useRef(false)
   const pointerLocked = useRef(false)
+  const distAccum = useRef(0)
 
   const wallBoxes = useMemo(() => getWallBoxes(game.cells), [game.cells])
   const wallBoxesRef = useRef(wallBoxes)
@@ -227,6 +228,7 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen }) 
     playerPos.current.set(...game.startPos)
     yaw.current = Math.PI
     pitch.current = 0
+    distAccum.current = 0
   }, [game])
 
   // Pointer lock for mouse look
@@ -315,10 +317,21 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen }) 
         dx = (dx / len) * PLAYER_SPEED * delta
         dz = (dz / len) * PLAYER_SPEED * delta
 
+        const ox = pos.x, oz = pos.z
         const nx = pos.x + dx
         const nz = pos.z + dz
         if (!collidesWithWall(nx, pos.z)) pos.x = nx
         if (!collidesWithWall(pos.x, nz)) pos.z = nz
+
+        // Track distance for step counting
+        const moved = Math.sqrt((pos.x - ox) ** 2 + (pos.z - oz) ** 2)
+        if (moved > 0 && onStepUsed) {
+          distAccum.current += moved
+          while (distAccum.current >= 1) {
+            distAccum.current -= 1
+            onStepUsed()
+          }
+        }
       }
 
       // Clamp to maze bounds so player can't escape through entry/exit openings

@@ -32,7 +32,9 @@ export default function App() {
   const [won, setWon] = useState(false)
   const [screen, setScreen] = useState('title') // 'title' | 'countdown' | 'playing' | 'won'
   const [countdown, setCountdown] = useState(0)
-  const [quizAction, setQuizAction] = useState(null) // fn to run after quiz success
+  const [quizInfo, setQuizInfo] = useState(null) // { onSuccess, onCancel?, prompt? }
+  const [maxSteps, setMaxSteps] = useState(0)
+  const [stepsRemaining, setStepsRemaining] = useState(0)
 
   const beginLevel = useCallback((lvl, g) => {
     setLevel(lvl)
@@ -41,13 +43,17 @@ export default function App() {
     setTopView(true)
     setCountdown(10)
     setScreen('countdown')
+    // Steps proportional to maze area — enough to walk ~45% of cells
+    const ms = Math.ceil(g.width * g.height * CELL_SIZE * 0.45)
+    setMaxSteps(ms)
+    setStepsRemaining(ms)
   }, [])
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.code === 'KeyT' && screen === 'playing') {
+      if (e.code === 'KeyT' && screen === 'playing' && !quizInfo) {
         if (topView) setTopView(false)
-        else setQuizAction(() => () => setTopView(true))
+        else setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: '🗺️ Unlock the map!' })
       }
       if (e.code === 'Space' && screen === 'title') {
         beginLevel(0, newGame(0))
@@ -59,7 +65,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [screen, topView, beginLevel])
+  }, [screen, topView, quizInfo, beginLevel])
 
   // Countdown timer
   useEffect(() => {
@@ -72,6 +78,21 @@ export default function App() {
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(timer)
   }, [screen, countdown])
+
+  // Auto-trigger mandatory quiz when steps run out
+  useEffect(() => {
+    if (stepsRemaining <= 0 && maxSteps > 0 && screen === 'playing' && !quizInfo) {
+      setQuizInfo({
+        onSuccess: () => setStepsRemaining(prev => prev + Math.ceil(maxSteps * 0.4)),
+        canCancel: false,
+        prompt: '🦶 Out of steps! Solve to keep going',
+      })
+    }
+  }, [stepsRemaining, maxSteps, screen, quizInfo])
+
+  const onStepUsed = useCallback(() => {
+    setStepsRemaining(prev => Math.max(0, prev - 1))
+  }, [])
 
   const startGame = useCallback(() => {
     beginLevel(0, newGame(0))
@@ -124,21 +145,25 @@ export default function App() {
           topView={topView}
           onWin={handleWin}
           won={won}
-          frozen={screen === 'countdown'}
+          frozen={screen === 'countdown' || (stepsRemaining <= 0 && screen === 'playing')}
+          onStepUsed={onStepUsed}
         />
       </Canvas>
 
       <HUD
         level={level + 1}
         topView={topView}
-        onToggleView={() => topView ? setTopView(false) : setQuizAction(() => () => setTopView(true))}
+        onToggleView={() => topView ? setTopView(false) : setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: '🗺️ Unlock the map!' })}
         won={won}
+        stepsRemaining={stepsRemaining}
+        maxSteps={maxSteps}
       />
 
-      {quizAction && (
+      {quizInfo && (
         <QuizModal
-          onSuccess={() => { quizAction(); setQuizAction(null) }}
-          onCancel={() => setQuizAction(null)}
+          onSuccess={() => { quizInfo.onSuccess(); setQuizInfo(null) }}
+          onCancel={quizInfo.canCancel ? () => setQuizInfo(null) : undefined}
+          prompt={quizInfo.prompt}
         />
       )}
 
