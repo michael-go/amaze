@@ -210,14 +210,12 @@ const CAM_LERP = 5 // smoothing
 
 export default function MazeScene({ game, level, topView, onWin, won, frozen, onStepUsed }) {
   const theme = levelTheme(level)
-  const { camera, gl } = useThree()
+  const { camera } = useThree()
   const keys = useKeyboardControls()
 
   const playerPos = useRef(new THREE.Vector3(...game.startPos))
   const yaw = useRef(Math.PI)
-  const pitch = useRef(0)
   const isMoving = useRef(false)
-  const pointerLocked = useRef(false)
   const distAccum = useRef(0)
 
   const wallBoxes = useMemo(() => getWallBoxes(game.cells), [game.cells])
@@ -227,39 +225,8 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen, on
   useEffect(() => {
     playerPos.current.set(...game.startPos)
     yaw.current = Math.PI
-    pitch.current = 0
     distAccum.current = 0
   }, [game])
-
-  // Pointer lock for mouse look
-  useEffect(() => {
-    if (topView || won) return
-    const canvas = gl.domElement
-
-    const onMove = (e) => {
-      if (!pointerLocked.current) return
-      yaw.current -= e.movementX * 0.002
-      pitch.current -= e.movementY * 0.002
-      pitch.current = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, pitch.current))
-    }
-    const onClick = () => {
-      if (!pointerLocked.current) canvas.requestPointerLock()
-    }
-    const onLockChange = () => {
-      pointerLocked.current = document.pointerLockElement === canvas
-    }
-
-    canvas.addEventListener('click', onClick)
-    document.addEventListener('pointerlockchange', onLockChange)
-    document.addEventListener('mousemove', onMove)
-
-    return () => {
-      canvas.removeEventListener('click', onClick)
-      document.removeEventListener('pointerlockchange', onLockChange)
-      document.removeEventListener('mousemove', onMove)
-      if (document.pointerLockElement) document.exitPointerLock()
-    }
-  }, [gl, topView, won])
 
   function collidesWithWall(nx, nz) {
     for (const box of wallBoxesRef.current) {
@@ -297,19 +264,16 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen, on
     if (won || frozen) return
 
     if (!topView) {
-      // Keyboard turning
+      // Turning
       if (keys.turnLeft) yaw.current += TURN_SPEED * delta
       if (keys.turnRight) yaw.current -= TURN_SPEED * delta
 
-      // Movement
+      // Forward/backward movement
       const forward = new THREE.Vector3(-Math.sin(yaw.current), 0, -Math.cos(yaw.current))
-      const right = new THREE.Vector3(Math.cos(yaw.current), 0, -Math.sin(yaw.current))
 
       let dx = 0, dz = 0
       if (keys.forward) { dx += forward.x; dz += forward.z }
       if (keys.backward) { dx -= forward.x; dz -= forward.z }
-      if (keys.left) { dx -= right.x; dz -= right.z }
-      if (keys.right) { dx += right.x; dz += right.z }
 
       const len = Math.sqrt(dx * dx + dz * dz)
       isMoving.current = len > 0

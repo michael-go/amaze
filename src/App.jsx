@@ -26,6 +26,10 @@ function newGame(level) {
   }
 }
 
+function Key({ children }) {
+  return <span style={styles.keyCap}>{children}</span>
+}
+
 export default function App() {
   const { t, toggle: toggleLang } = useI18n()
   const [level, setLevel] = useState(0)
@@ -124,13 +128,12 @@ export default function App() {
           <h1 style={{ ...styles.title, fontFamily: font }}>{t.title}</h1>
           <p style={{ ...styles.subtitle, fontFamily: font, fontSize: 18 }}>{t.subtitle}</p>
           <div style={{ ...styles.instructions, fontFamily: font, fontSize: 16 }}>
-            <p>{t.instrMove}</p>
-            <p>{t.instrTurn}</p>
-            <p>{t.instrUpDown}</p>
-            <p>{t.instrMouse}</p>
-            <p>{t.instrToggle}</p>
-            <p>{t.instrExit}</p>
+            <div style={styles.instrRow}><Key>↑</Key> <span style={styles.instrDash}>—</span> {t.instrMove}</div>
+            <div style={styles.instrRow}><Key>←</Key> <Key>→</Key> <span style={styles.instrDash}>—</span> {t.instrTurn}</div>
+            <div style={styles.instrRow}><Key>↓</Key> <span style={styles.instrDash}>—</span> {t.instrUpDown}</div>
+            <div style={styles.instrRow}><Key>T</Key> <span style={styles.instrDash}>—</span> {t.instrToggle}</div>
           </div>
+          <p style={{ color: '#ccc', fontSize: 17, fontFamily: font, marginBottom: 28 }}>{t.instrExit}</p>
           <button style={{ ...styles.btn, fontFamily: font, fontSize: 20 }} onClick={startGame}>{t.startGame}</button>
           <div style={{ marginTop: 16 }}>{langButton}</div>
         </div>
@@ -236,11 +239,38 @@ const styles = {
   instructions: {
     color: '#aaa',
     fontSize: 14,
-    lineHeight: 2,
     marginBottom: 32,
     background: '#0a0a0a',
-    padding: '16px 24px',
+    padding: '20px 28px',
     borderRadius: 4,
+  },
+  instrRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    justifyContent: 'center',
+  },
+  instrDash: {
+    color: '#555',
+    margin: '0 2px',
+  },
+  keyCap: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
+    height: 36,
+    padding: '0 8px',
+    background: '#222',
+    border: '1px solid #555',
+    borderBottom: '3px solid #444',
+    borderRadius: 6,
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'sans-serif',
+    fontWeight: 'bold',
+    boxShadow: '0 2px 0 #333',
   },
   countdownOverlay: {
     position: 'fixed',
