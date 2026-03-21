@@ -4,6 +4,7 @@ import MazeScene from './MazeScene'
 import HUD from './HUD'
 import QuizModal from './QuizModal'
 import { useI18n } from './i18n'
+import TouchControls from './TouchControls'
 import { generateMaze, CELL_SIZE } from './maze'
 
 const MAZE_SIZES = [
@@ -201,6 +202,7 @@ export default function App() {
       )}
 
       {langButton}
+      <TouchControls />
     </div>
   )
 }
@@ -318,7 +320,7 @@ const styles = {
   langBtn: {
     position: 'fixed',
     bottom: 40,
-    right: 20,
+    left: 20,
     background: 'rgba(0,0,0,0.5)',
     color: '#aaa',
     border: '1px solid #555',
