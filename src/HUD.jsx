@@ -1,14 +1,17 @@
+import { useI18n } from './i18n'
+
 export default function HUD({ level, topView, onToggleView, won, stepsRemaining, maxSteps }) {
+  const { t } = useI18n()
   const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1
   const barColor = pct > 0.6 ? '#44bb44' : pct > 0.35 ? '#ff6b35' : pct > 0.15 ? '#ffaa00' : '#ff2222'
 
   return (
-    <div style={styles.hud}>
+    <div style={{ ...styles.hud, direction: t.dir, fontFamily: t.font }}>
       <div style={styles.left}>
-        <span style={styles.levelBadge}>LEVEL {level}</span>
+        <span style={{ ...styles.levelBadge, fontSize: 20 }}>{t.level} {level}</span>
         {!won && (
           <div style={styles.stepsBar}>
-            <div style={styles.stepsLabel}>🦶 STEPS</div>
+            <div style={{ ...styles.stepsLabel, fontSize: 14 }}>{t.steps}</div>
             <div style={styles.stepsTrack}>
               <div style={{ ...styles.stepsFill, width: `${pct * 100}%`, background: barColor }} />
             </div>
@@ -17,11 +20,11 @@ export default function HUD({ level, topView, onToggleView, won, stepsRemaining,
       </div>
       <div style={styles.right}>
         <button style={styles.viewBtn} onClick={onToggleView}>
-          {topView ? '👁 FIRST PERSON' : '🗺 TOP VIEW'}
+          {topView ? t.firstPerson : t.topView}
         </button>
       </div>
-<div style={styles.controls}>
-        WASD · MOVE &nbsp;|&nbsp; ←→ · TURN &nbsp;|&nbsp; MOUSE · LOOK &nbsp;|&nbsp; T · TOGGLE VIEW
+      <div style={styles.controls}>
+        {t.controls}
       </div>
     </div>
   )
@@ -50,7 +53,7 @@ const styles = {
   },
   levelBadge: {
     color: '#ff6b35',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 3,
@@ -61,28 +64,18 @@ const styles = {
     color: '#fff',
     border: '1px solid #444',
     padding: '8px 16px',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     fontSize: 13,
     cursor: 'pointer',
     borderRadius: 4,
     letterSpacing: 1,
-  },
-  crosshair: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 24,
-    fontWeight: 'bold',
-    lineHeight: 1,
   },
   stepsBar: {
     marginTop: 12,
   },
   stepsLabel: {
     color: 'rgba(255,255,255,0.5)',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     fontSize: 13,
     letterSpacing: 2,
     marginBottom: 4,
@@ -105,7 +98,7 @@ const styles = {
     left: '50%',
     transform: 'translateX(-50%)',
     color: 'rgba(255,255,255,0.35)',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     fontSize: 11,
     letterSpacing: 1,
     whiteSpace: 'nowrap',

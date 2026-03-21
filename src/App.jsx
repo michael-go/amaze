@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import MazeScene from './MazeScene'
 import HUD from './HUD'
 import QuizModal from './QuizModal'
+import { useI18n } from './i18n'
 import { generateMaze, CELL_SIZE } from './maze'
 
 const MAZE_SIZES = [
@@ -26,6 +27,7 @@ function newGame(level) {
 }
 
 export default function App() {
+  const { t, toggle: toggleLang } = useI18n()
   const [level, setLevel] = useState(0)
   const [game, setGame] = useState(() => newGame(0))
   const [topView, setTopView] = useState(false)
@@ -53,7 +55,7 @@ export default function App() {
     const onKey = (e) => {
       if (e.code === 'KeyT' && screen === 'playing' && !quizInfo) {
         if (topView) setTopView(false)
-        else setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: '🗺️ Unlock the map!' })
+        else setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: t.quizMapPrompt })
       }
       if (e.code === 'Space' && screen === 'title') {
         beginLevel(0, newGame(0))
@@ -65,7 +67,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [screen, topView, quizInfo, beginLevel])
+  }, [screen, topView, quizInfo, beginLevel, t])
 
   // Countdown timer
   useEffect(() => {
@@ -85,10 +87,10 @@ export default function App() {
       setQuizInfo({
         onSuccess: () => setStepsRemaining(prev => prev + Math.ceil(maxSteps * 0.4)),
         canCancel: false,
-        prompt: '🦶 Out of steps! Solve to keep going',
+        prompt: t.quizStepsPrompt,
       })
     }
-  }, [stepsRemaining, maxSteps, screen, quizInfo])
+  }, [stepsRemaining, maxSteps, screen, quizInfo, t])
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining(prev => Math.max(0, prev - 1))
@@ -109,28 +111,35 @@ export default function App() {
     setTopView(true)
   }, [])
 
+  const langButton = (
+    <button style={styles.langBtn} onClick={toggleLang}>{t.langToggle}</button>
+  )
+
+  const font = t.font
+
   if (screen === 'title') {
     return (
-      <div style={styles.overlay}>
+      <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
         <div style={styles.titleBox}>
-          <h1 style={styles.title}>AMAZE</h1>
-          <p style={styles.subtitle}>A 3D Maze Adventure</p>
-          <div style={styles.instructions}>
-            <p>WASD — Move &amp; strafe</p>
-            <p>Arrow Left/Right — Turn</p>
-            <p>Arrow Up/Down — Move</p>
-            <p>Mouse — Look around (click to lock)</p>
-            <p>T — Toggle top view</p>
-            <p>Find the <span style={{ color: '#00ff88' }}>green exit</span> to advance!</p>
+          <h1 style={{ ...styles.title, fontFamily: font }}>{t.title}</h1>
+          <p style={{ ...styles.subtitle, fontFamily: font, fontSize: 18 }}>{t.subtitle}</p>
+          <div style={{ ...styles.instructions, fontFamily: font, fontSize: 16 }}>
+            <p>{t.instrMove}</p>
+            <p>{t.instrTurn}</p>
+            <p>{t.instrUpDown}</p>
+            <p>{t.instrMouse}</p>
+            <p>{t.instrToggle}</p>
+            <p>{t.instrExit}</p>
           </div>
-          <button style={styles.btn} onClick={startGame}>START GAME</button>
+          <button style={{ ...styles.btn, fontFamily: font, fontSize: 20 }} onClick={startGame}>{t.startGame}</button>
+          <div style={{ marginTop: 16 }}>{langButton}</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', fontFamily: font }}>
       <Canvas
         shadows
         style={{ background: '#0a0a0a' }}
@@ -153,7 +162,7 @@ export default function App() {
       <HUD
         level={level + 1}
         topView={topView}
-        onToggleView={() => topView ? setTopView(false) : setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: '🗺️ Unlock the map!' })}
+        onToggleView={() => topView ? setTopView(false) : setQuizInfo({ onSuccess: () => setTopView(true), canCancel: true, prompt: t.quizMapPrompt })}
         won={won}
         stepsRemaining={stepsRemaining}
         maxSteps={maxSteps}
@@ -169,24 +178,26 @@ export default function App() {
 
       {screen === 'countdown' && (
         <div style={styles.countdownOverlay}>
-          <div style={styles.countdownText}>MEMORIZE THE MAZE!</div>
+          <div style={{ ...styles.countdownText, fontFamily: font, fontSize: 32 }}>{t.memorize}</div>
           <div style={styles.countdownNumber}>{countdown}</div>
-          <div style={styles.skipHint}>SPACE to skip</div>
+          <div style={styles.skipHint}>{t.spaceToSkip}</div>
         </div>
       )}
 
       {screen === 'won' && (
-        <div style={styles.overlay}>
+        <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
           <div style={styles.titleBox}>
-            <h1 style={{ ...styles.title, color: '#00ff88', fontSize: 'clamp(28px, 6vw, 64px)' }}>LEVEL {level + 1} COMPLETE!</h1>
-            <p style={styles.subtitle}>You found the exit!</p>
+            <h1 style={{ ...styles.title, fontFamily: font, color: '#00ff88', fontSize: 'clamp(28px, 6vw, 52px)' }}>{t.levelComplete(level + 1)}</h1>
+            <p style={{ ...styles.subtitle, fontFamily: font, fontSize: 18 }}>{t.youFoundExit}</p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
-              <button style={styles.btn} onClick={nextLevel}>NEXT LEVEL</button>
-              <button style={{ ...styles.btn, background: '#333' }} onClick={startGame}>RESTART</button>
+              <button style={{ ...styles.btn, fontFamily: font, fontSize: 20 }} onClick={nextLevel}>{t.nextLevel}</button>
+              <button style={{ ...styles.btn, fontFamily: font, fontSize: 20, background: '#333' }} onClick={startGame}>{t.restart}</button>
             </div>
           </div>
         </div>
       )}
+
+      {langButton}
     </div>
   )
 }
@@ -273,5 +284,20 @@ const styles = {
     letterSpacing: 2,
     cursor: 'pointer',
     borderRadius: 4,
+  },
+  langBtn: {
+    position: 'fixed',
+    bottom: 40,
+    right: 20,
+    background: 'rgba(0,0,0,0.5)',
+    color: '#aaa',
+    border: '1px solid #555',
+    padding: '6px 14px',
+    fontFamily: 'Courier New, monospace',
+    fontSize: 13,
+    cursor: 'pointer',
+    borderRadius: 4,
+    zIndex: 200,
+    pointerEvents: 'all',
   },
 }

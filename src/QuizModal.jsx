@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateQuestion } from './quiz'
+import { useI18n } from './i18n'
 
 export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
+  const { t } = useI18n()
   const [question] = useState(() => generateQuestion())
   const [input, setInput] = useState('')
   const [shake, setShake] = useState(false)
@@ -34,11 +36,11 @@ export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
   }
 
   return (
-    <div style={styles.backdrop}>
-      <div style={{ ...styles.box, animation: shake ? 'shake 0.45s ease' : 'none' }}>
-        <div style={styles.prompt}>{promptText || '🗺️ Unlock the map!'}</div>
+    <div style={{ ...styles.backdrop, fontFamily: t.font }}>
+      <div style={{ ...styles.box, animation: shake ? 'shake 0.45s ease' : 'none', fontFamily: t.font }}>
+        <div style={{ ...styles.prompt, fontSize: 18 }}>{promptText || '🗺️ Unlock the map!'}</div>
         <div style={styles.question}>{question.text} = ?</div>
-        {wrong && <div style={styles.wrong}>Not quite — try again!</div>}
+        {wrong && <div style={{ ...styles.wrong, fontSize: 16 }}>{t.wrongAnswer}</div>}
         <input
           ref={inputRef}
           type="number"
@@ -49,8 +51,8 @@ export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
           placeholder="?"
         />
         <div style={styles.buttons}>
-          <button style={styles.btn} onClick={submit}>CHECK</button>
-          {onCancel && <button style={{ ...styles.btn, ...styles.cancelBtn }} onClick={onCancel}>CANCEL</button>}
+          <button style={styles.btn} onClick={submit}>{t.check}</button>
+          {onCancel && <button style={{ ...styles.btn, ...styles.cancelBtn }} onClick={onCancel}>{t.cancel}</button>}
         </div>
       </div>
       <style>{`
@@ -85,7 +87,7 @@ const styles = {
     borderRadius: 12,
     padding: '36px 44px',
     textAlign: 'center',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     minWidth: 300,
   },
   prompt: {
@@ -116,7 +118,7 @@ const styles = {
     border: '2px solid #444',
     borderRadius: 6,
     padding: '8px 0',
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     marginBottom: 24,
     outline: 'none',
   },
@@ -131,7 +133,7 @@ const styles = {
     border: 'none',
     padding: '10px 28px',
     fontSize: 16,
-    fontFamily: 'Courier New, monospace',
+    fontFamily: 'inherit',
     letterSpacing: 2,
     cursor: 'pointer',
     borderRadius: 4,
