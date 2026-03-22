@@ -6,6 +6,7 @@ import QuizModal from "./QuizModal";
 import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
 import { generateMaze, CELL_SIZE } from "../lib/maze";
+import DebugPanel from "./DebugPanel";
 
 const MAZE_SIZES = [
   { w: 6, h: 6 },
@@ -131,6 +132,13 @@ export default function App() {
     setTopView(true);
   }, []);
 
+  const jumpToLevel = useCallback(
+    (lvl) => {
+      beginLevel(lvl, newGame(lvl));
+    },
+    [beginLevel],
+  );
+
   const langButton = (
     <button style={styles.langBtn} onClick={toggleLang}>
       {t.langToggle}
@@ -184,6 +192,7 @@ export default function App() {
           </button>
           <div style={{ marginTop: 16 }}>{langButton}</div>
         </div>
+        <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
       </div>
     );
   }
@@ -304,6 +313,7 @@ export default function App() {
 
       {langButton}
       <TouchControls />
+      <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
     </div>
   );
 }

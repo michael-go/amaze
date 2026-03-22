@@ -175,7 +175,7 @@ export default function MazeScene({
 
   return (
     <>
-      <ambientLight intensity={topView ? 1.5 : 1.0} />
+      <ambientLight intensity={topView ? 2.0 : 1.0} />
       <hemisphereLight args={["#8888aa", "#444466", 0.6]} />
       {!topView && <PlayerLight playerPos={playerPos} />}
       {topView && (
@@ -185,7 +185,7 @@ export default function MazeScene({
             30,
             (game.height * CELL_SIZE) / 2,
           ]}
-          intensity={1}
+          intensity={2}
         />
       )}
 

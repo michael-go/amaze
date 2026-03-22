@@ -23,7 +23,7 @@ export const LEVEL_THEMES = [
     rough: 0.8,
     metal: 0.0,
     emissive: "#001a0a",
-    floor: "#1a3a28",
+    floor: "#3a5a48",
     pattern: "mossy",
   }, // 2: mossy dungeon
   {
@@ -39,7 +39,7 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.7,
     emissive: "#000010",
-    floor: "#202040",
+    floor: "#4a4a70",
     pattern: "metal",
   }, // 4: metal fortress
   {
@@ -47,7 +47,7 @@ export const LEVEL_THEMES = [
     rough: 0.5,
     metal: 0.4,
     emissive: "#0a001a",
-    floor: "#2a1a3a",
+    floor: "#4a3a5a",
     pattern: "crystal",
   }, // 5: arcane crystal
   {
@@ -55,7 +55,7 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.3,
     emissive: "#001418",
-    floor: "#162a30",
+    floor: "#3a5a60",
     pattern: "ice",
   }, // 6: ice cave
   {
@@ -63,7 +63,7 @@ export const LEVEL_THEMES = [
     rough: 0.9,
     metal: 0.0,
     emissive: "#100800",
-    floor: "#3a3010",
+    floor: "#5a5030",
     pattern: "brick",
   }, // 7: ancient ruins
 ];
