@@ -334,14 +334,20 @@ export default function App() {
       )}
 
       {screen === "countdown" && (
-        <div style={styles.countdownOverlay}>
+        <div
+          style={styles.countdownOverlay}
+          onClick={() => {
+            setTopView(false);
+            setScreen("playing");
+          }}
+        >
           <div
             style={{ ...styles.countdownText, fontFamily: font, fontSize: 32 }}
           >
             {t.memorize}
           </div>
           <div style={styles.countdownNumber}>{countdown}</div>
-          <div style={styles.skipHint}>{t.spaceToSkip}</div>
+          <div style={styles.skipHint}>{t.tapToSkip}</div>
         </div>
       )}
 
@@ -475,7 +481,7 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: "none",
+    cursor: "pointer",
     zIndex: 50,
   },
   countdownText: {
