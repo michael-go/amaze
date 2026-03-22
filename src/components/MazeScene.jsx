@@ -59,8 +59,15 @@ export default function MazeScene({ game, level, topView, onWin, won, frozen, on
       camera.up.set(0, 0, -1)
       const cx = game.width * CELL_SIZE / 2
       const cz = game.height * CELL_SIZE / 2
-      const maxDim = Math.max(game.width, game.height) * CELL_SIZE
-      camera.position.set(cx, maxDim * 0.9, cz)
+      const mazeW = game.width * CELL_SIZE
+      const mazeH = game.height * CELL_SIZE
+      const fovRad = camera.fov * Math.PI / 180
+      const aspect = camera.aspect || 1
+      // Height needed to fit maze vertically and horizontally
+      const hForH = (mazeH / 2) / Math.tan(fovRad / 2)
+      const hForW = (mazeW / 2) / Math.tan(fovRad / 2) / aspect
+      const camHeight = Math.max(hForH, hForW) * 1.1
+      camera.position.set(cx, camHeight, cz)
       camera.lookAt(cx, 0, cz)
 
       if (!won && !frozen) {
