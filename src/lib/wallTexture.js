@@ -77,15 +77,6 @@ export function createWallTexture(theme) {
       }
       y += bh
     }
-    // grout lines
-    ctx.strokeStyle = tint(0.45)
-    ctx.lineWidth = 2
-    let gy = 0
-    while (gy < S) {
-      const bh = 28 + ~~(rand() * 22)
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(S, gy); ctx.stroke()
-      gy += bh
-    }
   }
 
   else if (theme.pattern === 'metal') {
