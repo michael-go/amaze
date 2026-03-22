@@ -14,7 +14,7 @@ const strings = {
     restart: "מההתחלה",
     level: "שלב",
     levelComplete: (n) => `שלב ${n} הושלם!`,
-    youFoundExit: "!מצאתם את האוצר",
+    youFoundExit: "מצאתם את האוצר!",
     memorize: "!שננו את המבוך",
     spaceToSkip: "רווח לדלג",
     steps: "צעדים 🦶",
