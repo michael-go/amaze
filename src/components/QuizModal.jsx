@@ -2,9 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { generateQuestion } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
 
-export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
+export default function QuizModal({
+  enabledOps,
+  onSuccess,
+  onCancel,
+  prompt: promptText,
+}) {
   const { t } = useI18n();
-  const [question] = useState(() => generateQuestion());
+  const [question] = useState(() => generateQuestion(enabledOps));
   const [input, setInput] = useState("");
   const [shake, setShake] = useState(false);
   const [wrong, setWrong] = useState(false);

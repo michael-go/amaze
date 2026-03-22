@@ -7,6 +7,7 @@ import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
 import { generateMaze, CELL_SIZE } from "../lib/maze";
 import DebugPanel from "./DebugPanel";
+import SettingsModal from "./SettingsModal";
 
 const MAZE_SIZES = [
   { w: 6, h: 6 },
@@ -47,6 +48,8 @@ export default function App() {
   const [quizInfo, setQuizInfo] = useState(null); // { onSuccess, onCancel?, prompt? }
   const [maxSteps, setMaxSteps] = useState(0);
   const [stepsRemaining, setStepsRemaining] = useState(0);
+  const [enabledOps, setEnabledOps] = useState(["+", "-"]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const beginLevel = useCallback((lvl, g) => {
     setLevel(lvl);
@@ -190,8 +193,31 @@ export default function App() {
           >
             {t.startGame}
           </button>
-          <div style={{ marginTop: 16 }}>{langButton}</div>
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              gap: 12,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            {langButton}
+            <button
+              style={{ ...styles.langBtn, position: "static", fontSize: 24 }}
+              onClick={() => setShowSettings(true)}
+            >
+              &#9881;
+            </button>
+          </div>
         </div>
+        {showSettings && (
+          <SettingsModal
+            enabledOps={enabledOps}
+            onSave={setEnabledOps}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
         <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
       </div>
     );
@@ -244,12 +270,21 @@ export default function App() {
 
       {quizInfo && (
         <QuizModal
+          enabledOps={enabledOps}
           onSuccess={() => {
             quizInfo.onSuccess();
             setQuizInfo(null);
           }}
           onCancel={quizInfo.canCancel ? () => setQuizInfo(null) : undefined}
           prompt={quizInfo.prompt}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          enabledOps={enabledOps}
+          onSave={setEnabledOps}
+          onClose={() => setShowSettings(false)}
         />
       )}
 
@@ -312,6 +347,9 @@ export default function App() {
       )}
 
       {langButton}
+      <button style={styles.settingsBtn} onClick={() => setShowSettings(true)}>
+        &#9881;
+      </button>
       <TouchControls />
       <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
     </div>
@@ -427,6 +465,21 @@ const styles = {
     letterSpacing: 2,
     cursor: "pointer",
     borderRadius: 4,
+  },
+  settingsBtn: {
+    position: "fixed",
+    bottom: 80,
+    left: 20,
+    background: "rgba(0,0,0,0.5)",
+    color: "#aaa",
+    border: "1px solid #555",
+    padding: "6px 14px",
+    fontFamily: "Courier New, monospace",
+    fontSize: 24,
+    cursor: "pointer",
+    borderRadius: 4,
+    zIndex: 200,
+    pointerEvents: "all",
   },
   langBtn: {
     position: "fixed",
