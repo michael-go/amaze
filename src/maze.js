@@ -102,8 +102,8 @@ export function getWallBoxes(cells) {
         if (runStart < 0) runStart = x
       } else {
         if (runStart >= 0) {
-          const x0 = runStart * CELL_SIZE - T / 2
-          const x1 = x * CELL_SIZE + T / 2
+          const x0 = runStart * CELL_SIZE
+          const x1 = x * CELL_SIZE
           boxes.push({ cx: (x0 + x1) / 2, cz: y * CELL_SIZE, width: x1 - x0, depth: T, axis: 'h' })
           runStart = -1
         }
@@ -124,8 +124,8 @@ export function getWallBoxes(cells) {
         if (runStart < 0) runStart = y
       } else {
         if (runStart >= 0) {
-          const z0 = runStart * CELL_SIZE - T / 2
-          const z1 = y * CELL_SIZE + T / 2
+          const z0 = runStart * CELL_SIZE
+          const z1 = y * CELL_SIZE
           boxes.push({ cx: x * CELL_SIZE, cz: (z0 + z1) / 2, width: T, depth: z1 - z0, axis: 'v' })
           runStart = -1
         }
