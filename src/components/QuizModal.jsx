@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { generateQuestion } from './quiz'
-import { useI18n } from './i18n'
+import { generateQuestion } from '../lib/quiz'
+import { useI18n } from '../lib/i18n'
 
 export default function QuizModal({ onSuccess, onCancel, prompt: promptText }) {
   const { t } = useI18n()

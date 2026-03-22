@@ -3,9 +3,9 @@ import { Canvas } from '@react-three/fiber'
 import MazeScene from './MazeScene'
 import HUD from './HUD'
 import QuizModal from './QuizModal'
-import { useI18n } from './i18n'
+import { useI18n } from '../lib/i18n'
 import TouchControls from './TouchControls'
-import { generateMaze, CELL_SIZE } from './maze'
+import { generateMaze, CELL_SIZE } from '../lib/maze'
 
 const MAZE_SIZES = [
   { w: 6, h: 6 },

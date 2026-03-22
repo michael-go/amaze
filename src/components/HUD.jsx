@@ -1,4 +1,4 @@
-import { useI18n } from './i18n'
+import { useI18n } from '../lib/i18n'
 
 export default function HUD({ level, topView, onToggleView, won, stepsRemaining, maxSteps }) {
   const { t } = useI18n()
