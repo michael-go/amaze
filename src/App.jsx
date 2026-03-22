@@ -145,11 +145,11 @@ export default function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', fontFamily: font }}>
       <Canvas
-        shadows
+        gl={{ antialias: true }}
         style={{ background: '#0a0a0a' }}
         camera={topView
           ? undefined
-          : { fov: 75, near: 0.1, far: 500 }
+          : { fov: 75, near: 0.5, far: 200 }
         }
       >
         <MazeScene

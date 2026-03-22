@@ -24,7 +24,7 @@ function seededRand(seed) {
 }
 
 function createWallTexture(theme) {
-  const S = 256
+  const S = 512
   const canvas = document.createElement('canvas')
   canvas.width = S; canvas.height = S
   const ctx = canvas.getContext('2d')
@@ -191,6 +191,10 @@ function createWallTexture(theme) {
   const tex = new THREE.CanvasTexture(canvas)
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
   tex.repeat.set(1.5, 1)
+  tex.generateMipmaps = true
+  tex.minFilter = THREE.LinearMipmapLinearFilter
+  tex.magFilter = THREE.LinearFilter
+  tex.anisotropy = 16
   return tex
 }
 
@@ -459,7 +463,7 @@ function KidCharacter({ playerPos, yaw, isMoving }) {
     // Walking animation
     if (isMoving.current) {
       const t = clock.elapsedTime * 8
-      const swing = Math.sin(t) * 0.6
+      const swing = Math.sin(t) * 0.4
       if (leftLegRef.current) leftLegRef.current.rotation.x = swing
       if (rightLegRef.current) rightLegRef.current.rotation.x = -swing
       if (leftArmRef.current) leftArmRef.current.rotation.x = -swing
@@ -501,47 +505,47 @@ function KidCharacter({ playerPos, yaw, isMoving }) {
         <meshStandardMaterial color="#222" />
       </mesh>
 
-      {/* Body (t-shirt) */}
+      {/* Body (t-shirt) — narrower than limb span to avoid clipping */}
       <mesh position={[0, 0.95, 0]}>
-        <boxGeometry args={[0.38, 0.45, 0.25]} />
+        <boxGeometry args={[0.34, 0.45, 0.22]} />
         <meshStandardMaterial color="#e63946" />
       </mesh>
 
-      {/* Pants */}
-      <mesh position={[0, 0.65, 0]}>
-        <boxGeometry args={[0.38, 0.2, 0.25]} />
+      {/* Pants — slightly offset to avoid coplanar face with body */}
+      <mesh position={[0, 0.65, 0.001]}>
+        <boxGeometry args={[0.34, 0.2, 0.22]} />
         <meshStandardMaterial color="#457b9d" />
       </mesh>
 
-      {/* Left leg */}
-      <group position={[-0.1, 0.55, 0]} ref={leftLegRef}>
+      {/* Left leg — pulled slightly outward */}
+      <group position={[-0.11, 0.55, 0]} ref={leftLegRef}>
         <mesh position={[0, -0.2, 0]}>
-          <boxGeometry args={[0.14, 0.4, 0.16]} />
+          <boxGeometry args={[0.13, 0.4, 0.15]} />
           <meshStandardMaterial color="#457b9d" />
         </mesh>
         {/* Shoe */}
         <mesh position={[0, -0.42, 0.03]}>
-          <boxGeometry args={[0.16, 0.08, 0.22]} />
+          <boxGeometry args={[0.15, 0.08, 0.22]} />
           <meshStandardMaterial color="#333" />
         </mesh>
       </group>
 
       {/* Right leg */}
-      <group position={[0.1, 0.55, 0]} ref={rightLegRef}>
+      <group position={[0.11, 0.55, 0]} ref={rightLegRef}>
         <mesh position={[0, -0.2, 0]}>
-          <boxGeometry args={[0.14, 0.4, 0.16]} />
+          <boxGeometry args={[0.13, 0.4, 0.15]} />
           <meshStandardMaterial color="#457b9d" />
         </mesh>
         <mesh position={[0, -0.42, 0.03]}>
-          <boxGeometry args={[0.16, 0.08, 0.22]} />
+          <boxGeometry args={[0.15, 0.08, 0.22]} />
           <meshStandardMaterial color="#333" />
         </mesh>
       </group>
 
-      {/* Left arm */}
-      <group position={[-0.27, 1.1, 0]} ref={leftArmRef}>
+      {/* Left arm — pulled outward so it clears the body */}
+      <group position={[-0.25, 1.1, 0]} ref={leftArmRef}>
         <mesh position={[0, -0.18, 0]}>
-          <boxGeometry args={[0.12, 0.36, 0.14]} />
+          <boxGeometry args={[0.11, 0.36, 0.13]} />
           <meshStandardMaterial color="#e63946" />
         </mesh>
         {/* Hand */}
@@ -552,9 +556,9 @@ function KidCharacter({ playerPos, yaw, isMoving }) {
       </group>
 
       {/* Right arm */}
-      <group position={[0.27, 1.1, 0]} ref={rightArmRef}>
+      <group position={[0.25, 1.1, 0]} ref={rightArmRef}>
         <mesh position={[0, -0.18, 0]}>
-          <boxGeometry args={[0.12, 0.36, 0.14]} />
+          <boxGeometry args={[0.11, 0.36, 0.13]} />
           <meshStandardMaterial color="#e63946" />
         </mesh>
         <mesh position={[0, -0.38, 0]}>
@@ -578,7 +582,7 @@ function TreasureChest({ position }) {
       lidRef.current.rotation.x = -0.2 - Math.sin(t * 1.5) * 0.15
     }
     if (glowRef.current) {
-      glowRef.current.intensity = 3 + Math.sin(t * 2) * 1.5
+      glowRef.current.intensity = 2 + Math.sin(t * 2) * 0.8
     }
   })
 
@@ -586,8 +590,8 @@ function TreasureChest({ position }) {
     <group position={[position[0], 0, position[2]]}>
       {/* Glow pad */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <circleGeometry args={[1.2, 32]} />
-        <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.3} transparent opacity={0.4} />
+        <circleGeometry args={[0.9, 32]} />
+        <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.2} transparent opacity={0.35} />
       </mesh>
 
       {/* Chest base */}
@@ -621,7 +625,7 @@ function TreasureChest({ position }) {
       </group>
 
       {/* Treasure glow from inside */}
-      <pointLight ref={glowRef} position={[0, 0.5, 0]} color="#ffd700" intensity={3} distance={8} />
+      <pointLight ref={glowRef} position={[0, 0.5, 0]} color="#ffd700" intensity={2} distance={3} decay={2} />
 
       {/* Gold coins inside (small spheres) */}
       {[[-0.15, 0.35, 0], [0.1, 0.33, -0.05], [0, 0.38, 0.08], [0.15, 0.36, -0.1], [-0.08, 0.4, 0.05]].map((p, i) => (
@@ -640,7 +644,7 @@ function MazeFloor({ game, theme }) {
   const w = game.width * CELL_SIZE
   const h = game.height * CELL_SIZE
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
       <planeGeometry args={[w, h]} />
       <meshStandardMaterial color={theme.floor} roughness={0.9} />
     </mesh>
@@ -658,17 +662,27 @@ function PlayerLight({ playerPos }) {
 }
 
 function MazeWalls({ wallBoxes, theme }) {
-  const material = useMemo(() => new THREE.MeshStandardMaterial({
-    map: createWallTexture(theme),
+  const tex = useMemo(() => createWallTexture(theme), [theme])
+  const matH = useMemo(() => new THREE.MeshStandardMaterial({
+    map: tex,
     roughness: theme.rough,
     metalness: theme.metal,
     emissive: new THREE.Color(theme.emissive),
-  }), [theme])
+  }), [tex, theme])
+  const matV = useMemo(() => new THREE.MeshStandardMaterial({
+    map: tex,
+    roughness: theme.rough,
+    metalness: theme.metal,
+    emissive: new THREE.Color(theme.emissive),
+    polygonOffset: true,
+    polygonOffsetFactor: 2,
+    polygonOffsetUnit: 2,
+  }), [tex, theme])
 
   return (
     <>
       {wallBoxes.map((box, i) => (
-        <mesh key={i} position={[box.cx, WALL_HEIGHT / 2, box.cz]} material={material} castShadow receiveShadow>
+        <mesh key={i} position={[box.cx, WALL_HEIGHT / 2, box.cz]} material={box.axis === 'h' ? matH : matV}>
           <boxGeometry args={[box.width, WALL_HEIGHT, box.depth]} />
         </mesh>
       ))}

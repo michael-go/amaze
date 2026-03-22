@@ -89,23 +89,46 @@ export function getWallBoxes(cells) {
   const boxes = []
   const T = 0.3 // wall thickness
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const cell = cells[y][x]
-      const wx = x * CELL_SIZE
-      const wy = y * CELL_SIZE
+  // Merge horizontal wall runs (top walls + bottom edge)
+  for (let y = 0; y <= height; y++) {
+    let runStart = -1
+    for (let x = 0; x <= width; x++) {
+      const hasWall = y < height && x < width
+        ? cells[y][x].walls.top
+        : y === height && x < width
+          ? cells[height - 1][x].walls.bottom
+          : false
+      if (hasWall) {
+        if (runStart < 0) runStart = x
+      } else {
+        if (runStart >= 0) {
+          const x0 = runStart * CELL_SIZE - T / 2
+          const x1 = x * CELL_SIZE + T / 2
+          boxes.push({ cx: (x0 + x1) / 2, cz: y * CELL_SIZE, width: x1 - x0, depth: T, axis: 'h' })
+          runStart = -1
+        }
+      }
+    }
+  }
 
-      if (cell.walls.top) {
-        boxes.push({ cx: wx + CELL_SIZE / 2, cz: wy, width: CELL_SIZE + T, depth: T })
-      }
-      if (cell.walls.left) {
-        boxes.push({ cx: wx, cz: wy + CELL_SIZE / 2, width: T, depth: CELL_SIZE + T })
-      }
-      if (x === width - 1 && cell.walls.right) {
-        boxes.push({ cx: wx + CELL_SIZE, cz: wy + CELL_SIZE / 2, width: T, depth: CELL_SIZE + T })
-      }
-      if (y === height - 1 && cell.walls.bottom) {
-        boxes.push({ cx: wx + CELL_SIZE / 2, cz: wy + CELL_SIZE, width: CELL_SIZE + T, depth: T })
+  // Merge vertical wall runs (left walls + right edge)
+  for (let x = 0; x <= width; x++) {
+    let runStart = -1
+    for (let y = 0; y <= height; y++) {
+      const hasWall = x < width && y < height
+        ? cells[y][x].walls.left
+        : x === width && y < height
+          ? cells[y][width - 1].walls.right
+          : false
+      if (hasWall) {
+        if (runStart < 0) runStart = y
+      } else {
+        if (runStart >= 0) {
+          const z0 = runStart * CELL_SIZE - T / 2
+          const z1 = y * CELL_SIZE + T / 2
+          boxes.push({ cx: x * CELL_SIZE, cz: (z0 + z1) / 2, width: T, depth: z1 - z0, axis: 'v' })
+          runStart = -1
+        }
       }
     }
   }
