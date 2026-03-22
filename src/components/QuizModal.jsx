@@ -70,7 +70,7 @@ export default function QuizModal({
           }}
           onKeyDown={onKeyDown}
           style={styles.input}
-          placeholder="?"
+          placeholder=""
         />
         <div style={styles.buttons}>
           <button style={styles.btn} onClick={submit}>
