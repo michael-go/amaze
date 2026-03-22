@@ -167,10 +167,12 @@ export default function MazeScene({
     }
 
     // Check win
-    const ex = game.exitPos[0];
-    const ez = game.exitPos[2];
-    const dist = Math.sqrt((pos.x - ex) ** 2 + (pos.z - ez) ** 2);
-    if (dist < EXIT_RADIUS) onWin();
+    if (!won && !frozen) {
+      const ex = game.exitPos[0];
+      const ez = game.exitPos[2];
+      const dist = Math.sqrt((pos.x - ex) ** 2 + (pos.z - ez) ** 2);
+      if (dist < EXIT_RADIUS) onWin();
+    }
   });
 
   return (

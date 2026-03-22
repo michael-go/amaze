@@ -29,6 +29,8 @@ const strings = {
     settings: "הגדרות",
     mathOps: "פעולות חשבון",
     save: "שמור",
+    continueFrom: (n) => `המשך משלב ${n}`,
+    startFromBeginning: "התחל מההתחלה",
     langToggle: "English",
     dir: "rtl",
     font: "'Heebo', sans-serif",
@@ -63,6 +65,8 @@ const strings = {
     settings: "SETTINGS",
     mathOps: "MATH OPERATIONS",
     save: "SAVE",
+    continueFrom: (n) => `CONTINUE FROM LEVEL ${n}`,
+    startFromBeginning: "START FROM LEVEL 1",
     langToggle: "עברית",
     dir: "ltr",
     font: "'Heebo', sans-serif",
@@ -74,9 +78,16 @@ const strings = {
 const I18nContext = createContext();
 
 export function I18nProvider({ children }) {
-  const [lang, setLang] = useState("he");
+  const [lang, setLang] = useState(
+    () => localStorage.getItem("amaze:lang") || "he",
+  );
   const toggle = useCallback(
-    () => setLang((l) => (l === "he" ? "en" : "he")),
+    () =>
+      setLang((l) => {
+        const next = l === "he" ? "en" : "he";
+        localStorage.setItem("amaze:lang", next);
+        return next;
+      }),
     [],
   );
   const t = strings[lang];

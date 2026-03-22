@@ -1,9 +1,10 @@
 import { useControls, Leva } from "leva";
+import { useEffect, useRef } from "react";
 
 const isDebug = () => window.location.hash.includes("debug");
 
-export default function DebugPanel({ level, onJumpToLevel }) {
-  const show = isDebug();
+function DebugControls({ level, onJumpToLevel }) {
+  const externalUpdate = useRef(false);
 
   const { Level } = useControls(
     {
@@ -12,9 +13,24 @@ export default function DebugPanel({ level, onJumpToLevel }) {
     [level],
   );
 
-  if (Level !== level + 1) {
-    onJumpToLevel(Level - 1);
-  }
+  useEffect(() => {
+    externalUpdate.current = true;
+  }, [level]);
 
-  return <Leva hidden={!show} collapsed={false} />;
+  useEffect(() => {
+    if (externalUpdate.current) {
+      externalUpdate.current = false;
+      return;
+    }
+    if (Level !== level + 1) {
+      onJumpToLevel(Level - 1);
+    }
+  }, [Level, level, onJumpToLevel]);
+
+  return <Leva collapsed={false} />;
+}
+
+export default function DebugPanel({ level, onJumpToLevel }) {
+  if (!isDebug()) return null;
+  return <DebugControls level={level} onJumpToLevel={onJumpToLevel} />;
 }

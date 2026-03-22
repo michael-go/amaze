@@ -48,11 +48,27 @@ export default function App() {
   const [quizInfo, setQuizInfo] = useState(null); // { onSuccess, onCancel?, prompt? }
   const [maxSteps, setMaxSteps] = useState(0);
   const [stepsRemaining, setStepsRemaining] = useState(0);
-  const [enabledOps, setEnabledOps] = useState(["+", "-"]);
+  const [enabledOps, setEnabledOps] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("amaze:ops"));
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch {}
+    return ["+", "-"];
+  });
   const [showSettings, setShowSettings] = useState(false);
+  const [savedLevel] = useState(() => {
+    const n = parseInt(localStorage.getItem("amaze:level"), 10);
+    return n > 0 ? n : 0;
+  });
+
+  const saveOps = useCallback((ops) => {
+    setEnabledOps(ops);
+    localStorage.setItem("amaze:ops", JSON.stringify(ops));
+  }, []);
 
   const beginLevel = useCallback((lvl, g) => {
     setLevel(lvl);
+    localStorage.setItem("amaze:level", String(lvl));
     setGame(g);
     setWon(false);
     setTopView(true);
@@ -187,12 +203,41 @@ export default function App() {
           >
             {t.instrExit}
           </p>
-          <button
-            style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
-            onClick={startGame}
-          >
-            {t.startGame}
-          </button>
+          {savedLevel > 0 ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <button
+                style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
+                onClick={() => beginLevel(savedLevel, newGame(savedLevel))}
+              >
+                {t.continueFrom(savedLevel + 1)}
+              </button>
+              <button
+                style={{
+                  ...styles.btn,
+                  fontFamily: font,
+                  fontSize: 16,
+                  background: "#333",
+                }}
+                onClick={startGame}
+              >
+                {t.startFromBeginning}
+              </button>
+            </div>
+          ) : (
+            <button
+              style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
+              onClick={startGame}
+            >
+              {t.startGame}
+            </button>
+          )}
           <div
             style={{
               marginTop: 16,
@@ -214,7 +259,7 @@ export default function App() {
         {showSettings && (
           <SettingsModal
             enabledOps={enabledOps}
-            onSave={setEnabledOps}
+            onSave={saveOps}
             onClose={() => setShowSettings(false)}
           />
         )}
@@ -283,7 +328,7 @@ export default function App() {
       {showSettings && (
         <SettingsModal
           enabledOps={enabledOps}
-          onSave={setEnabledOps}
+          onSave={saveOps}
           onClose={() => setShowSettings(false)}
         />
       )}
