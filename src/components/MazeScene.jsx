@@ -374,41 +374,44 @@ function TrailDots({ visitedCells }) {
     return arr;
   }, [visitedCells]);
 
-  const footMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#44ee88",
-        emissive: "#44ee88",
-        emissiveIntensity: 0.5,
-        transparent: true,
-        opacity: 0.6,
-      }),
-    [],
-  );
+  // Single shared texture + material for all footprints
+  const footMat = useMemo(() => {
+    const S = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, S, S);
+    ctx.fillStyle = "#44ee88";
+    // Left foot
+    ctx.beginPath();
+    ctx.ellipse(S * 0.32, S * 0.55, S * 0.12, S * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Right foot
+    ctx.beginPath();
+    ctx.ellipse(S * 0.68, S * 0.4, S * 0.12, S * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const tex = new THREE.CanvasTexture(canvas);
+    return new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+    });
+  }, []);
+
+  const geo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
 
   return (
     <>
       {dots.map((d) => (
-        <group key={d.key} position={[d.x, 0.015, d.z]}>
-          {/* Left foot */}
-          <mesh
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[-0.12, 0, 0]}
-            scale={[0.6, 1, 1]}
-            material={footMat}
-          >
-            <circleGeometry args={[0.13, 8]} />
-          </mesh>
-          {/* Right foot */}
-          <mesh
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0.12, 0, 0.18]}
-            scale={[0.6, 1, 1]}
-            material={footMat}
-          >
-            <circleGeometry args={[0.13, 8]} />
-          </mesh>
-        </group>
+        <mesh
+          key={d.key}
+          geometry={geo}
+          material={footMat}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[d.x, 0.015, d.z]}
+        />
       ))}
     </>
   );
