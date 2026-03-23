@@ -130,7 +130,7 @@ export default function MazeScene({
       camera.position.set(cx, camHeight, cz);
       camera.lookAt(cx, 0, cz);
 
-      if (!won && !frozen) {
+      if (!won && !frozen && !isFlying) {
         const ex = game.exitPos[0];
         const ez = game.exitPos[2];
         const dist = Math.sqrt((pos.x - ex) ** 2 + (pos.z - ez) ** 2);
