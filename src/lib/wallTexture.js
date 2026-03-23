@@ -39,7 +39,7 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.7,
     emissive: "#000010",
-    floor: "#4a4a70",
+    floor: "#22223a",
     pattern: "metal",
   }, // 4: metal fortress
   {
@@ -55,7 +55,7 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.3,
     emissive: "#001418",
-    floor: "#3a5a60",
+    floor: "#1a2a30",
     pattern: "ice",
   }, // 6: ice cave
   {
@@ -63,13 +63,41 @@ export const LEVEL_THEMES = [
     rough: 0.9,
     metal: 0.0,
     emissive: "#100800",
-    floor: "#5a5030",
+    floor: "#2a2510",
     pattern: "brick",
   }, // 7: ancient ruins
 ];
 
 export function levelTheme(level) {
-  return LEVEL_THEMES[level % LEVEL_THEMES.length];
+  const base = LEVEL_THEMES[level % LEVEL_THEMES.length];
+  if (level < LEVEL_THEMES.length) return base;
+
+  // For higher levels, shift the base theme's colors to create unique variations
+  const cycle = Math.floor(level / LEVEL_THEMES.length);
+  const hueShift = (cycle * 47 + level * 13) % 360;
+
+  const shiftColor = (hex) => {
+    const c = new THREE.Color(hex);
+    const hsl = {};
+    c.getHSL(hsl);
+    hsl.h = (hsl.h + hueShift / 360) % 1;
+    hsl.s = Math.min(1, hsl.s * (0.8 + (cycle % 3) * 0.2));
+    hsl.l = Math.min(0.7, Math.max(0.1, hsl.l + ((cycle % 2) * 0.08 - 0.04)));
+    c.setHSL(hsl.h, hsl.s, hsl.l);
+    return "#" + c.getHexString();
+  };
+
+  return {
+    ...base,
+    wall: shiftColor(base.wall),
+    floor: shiftColor(base.floor),
+    emissive: shiftColor(base.emissive),
+    rough: Math.min(1, base.rough + ((cycle * 7) % 5) * 0.05 - 0.1),
+    metal: Math.min(
+      1,
+      Math.max(0, base.metal + ((cycle * 3) % 4) * 0.1 - 0.15),
+    ),
+  };
 }
 
 // Seeded pseudo-random so textures are stable across renders
