@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { ALL_OPS } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
+import { isMuted, setMuted } from "../lib/sounds";
 
 export default function SettingsModal({ enabledOps, onSave, onClose }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState(new Set(enabledOps));
+  const [muted, setMutedState] = useState(isMuted);
 
   function toggle(op) {
     setSelected((prev) => {
@@ -43,6 +45,25 @@ export default function SettingsModal({ enabledOps, onSave, onClose }) {
               </button>
             ))}
           </div>
+        </div>
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>{t.sound}</div>
+          <button
+            style={{
+              ...styles.opBtn,
+              ...(muted ? {} : styles.opBtnActive),
+              width: "auto",
+              padding: "0 16px",
+              fontSize: 18,
+            }}
+            onClick={() => {
+              const next = !muted;
+              setMutedState(next);
+              setMuted(next);
+            }}
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
         </div>
         <div style={styles.buttons}>
           <button style={styles.saveBtn} onClick={save}>

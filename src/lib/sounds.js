@@ -18,8 +18,17 @@ function dest() {
   return lpf;
 }
 
+export function isMuted() {
+  return localStorage.getItem("amaze:muted") === "true";
+}
+
+export function setMuted(val) {
+  localStorage.setItem("amaze:muted", val ? "true" : "false");
+}
+
 // Magical sparkle: quick rising arpeggio of sine tones
 export function playMagicPickup() {
+  if (isMuted()) return;
   const c = getCtx();
   const now = c.currentTime;
   const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
@@ -39,6 +48,7 @@ export function playMagicPickup() {
 
 // Treasure collected: triumphant major chord with shimmer
 export function playTreasureWin() {
+  if (isMuted()) return;
   const c = getCtx();
   const now = c.currentTime;
   // Staggered major chord: C4, E4, G4, C5

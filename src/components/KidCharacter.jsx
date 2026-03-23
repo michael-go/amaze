@@ -1,6 +1,7 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { isMuted } from "../lib/sounds";
 
 // ─── Curved backwards cap brim — D-shaped with variable depth and natural droop ───
 function BrimGeometry() {
@@ -127,6 +128,7 @@ export default function KidCharacter({
   const isFlying = activePower === "fly";
 
   const playFootstep = () => {
+    if (isMuted()) return;
     if (!audioCtx.current) {
       audioCtx.current = new (
         window.AudioContext || window.webkitAudioContext
@@ -134,22 +136,28 @@ export default function KidCharacter({
     }
     const ctx = audioCtx.current;
     if (ctx.state === "suspended") ctx.resume();
-    const duration = 0.06;
+    // Soft step: short filtered noise with gentle attack
+    const duration = 0.07;
     const bufSize = Math.ceil(ctx.sampleRate * duration);
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < bufSize; i++) {
-      const env = 1 - i / bufSize;
-      data[i] = (Math.random() * 2 - 1) * env * env;
+      const t = i / bufSize;
+      // Soft attack, quick fade
+      const env = Math.sin(t * Math.PI) * (1 - t);
+      data[i] = (Math.random() * 2 - 1) * env;
     }
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 350;
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = "lowpass";
+    lpf.frequency.value = 180;
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = "highpass";
+    hpf.frequency.value = 60;
     const gain = ctx.createGain();
-    gain.gain.value = 1.5;
-    src.connect(filter).connect(gain).connect(ctx.destination);
+    gain.gain.value = 2.5;
+    src.connect(lpf).connect(hpf).connect(gain).connect(ctx.destination);
     src.start();
   };
 
