@@ -239,8 +239,8 @@ export default function MazeScene({
         Math.min(game.height * CELL_SIZE - margin, pos.z),
       );
 
-      // Track visited cells for trail
-      if (trailActive) trackCell(pos.x, pos.z);
+      // Always track visited cells (trail reveals them retroactively)
+      trackCell(pos.x, pos.z);
 
       // Check magic item pickup
       if (magicItems && onPickupItem && !activePower) {
@@ -331,7 +331,7 @@ export default function MazeScene({
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       {magicItems &&
-        magicItems.map((item, i) => (
+        magicItems.map((item) => (
           <MagicItem key={`${item.cellX}-${item.cellY}`} item={item} />
         ))}
       {trailActive && <TrailDots visitedCells={visitedCells} />}

@@ -152,10 +152,10 @@ export default function App() {
       const item = prev[index];
       if (item.type === "trail") {
         setTrailActive(true);
-      } else {
-        setActivePower(item.type);
-        setPowerEndTime(Date.now() + 5000);
+        return prev.filter((it) => it.type !== "trail");
       }
+      setActivePower(item.type);
+      setPowerEndTime(Date.now() + 5000);
       return prev.filter((_, i) => i !== index);
     });
   }, []);
