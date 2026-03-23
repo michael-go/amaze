@@ -171,7 +171,9 @@ export function getWallBoxes(cells) {
 export function placeMagicItems(cells, count) {
   const height = cells.length;
   const width = cells[0].length;
-  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL];
+  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL].sort(
+    () => Math.random() - 0.5,
+  );
   const items = [];
   const used = new Set();
   used.add("0,0");
