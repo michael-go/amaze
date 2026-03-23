@@ -355,6 +355,7 @@ export default function MazeScene({
         isMoving={isMoving}
         activePower={activePower}
         playerY={playerY}
+        frozen={frozen || won}
       />
     </>
   );

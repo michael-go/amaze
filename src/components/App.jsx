@@ -8,6 +8,7 @@ import TouchControls from "./TouchControls";
 import { generateMaze, CELL_SIZE, placeMagicItems } from "../lib/maze";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
+import { playMagicPickup, playTreasureWin } from "../lib/sounds";
 
 const MAZE_SIZES = [
   { w: 6, h: 6 },
@@ -151,6 +152,7 @@ export default function App() {
   const onPickupItem = useCallback(
     (index) => {
       const collectItem = () => {
+        playMagicPickup();
         setSkippedItem(-1);
         setMagicItems((prev) => {
           const item = prev[index];
@@ -201,6 +203,7 @@ export default function App() {
   }, [level, beginLevel]);
 
   const handleWin = useCallback(() => {
+    playTreasureWin();
     setWon(true);
     setScreen("won");
     setTopView(true);

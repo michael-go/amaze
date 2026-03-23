@@ -111,6 +111,7 @@ export default function KidCharacter({
   yaw,
   isMoving,
   activePower,
+  frozen,
   playerY,
 }) {
   const groupRef = useRef();
@@ -119,9 +120,38 @@ export default function KidCharacter({
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const auraRef = useRef();
+  const prevSwing = useRef(0);
+  const audioCtx = useRef(null);
 
   const isGhost = activePower === "ghost";
   const isFlying = activePower === "fly";
+
+  const playFootstep = () => {
+    if (!audioCtx.current) {
+      audioCtx.current = new (
+        window.AudioContext || window.webkitAudioContext
+      )();
+    }
+    const ctx = audioCtx.current;
+    if (ctx.state === "suspended") ctx.resume();
+    const duration = 0.06;
+    const bufSize = Math.ceil(ctx.sampleRate * duration);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const env = 1 - i / bufSize;
+      data[i] = (Math.random() * 2 - 1) * env * env;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 350;
+    const gain = ctx.createGain();
+    gain.gain.value = 1.5;
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start();
+  };
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
@@ -144,9 +174,12 @@ export default function KidCharacter({
       if (rightLegRef.current) rightLegRef.current.rotation.set(0.3, 0, 0);
       // Gentle hovering bob
       groupRef.current.position.y = yOff + Math.sin(t * 1.5) * 0.08;
-    } else if (isMoving.current) {
+    } else if (isMoving.current && !frozen) {
       const t = clock.elapsedTime * 8;
       const swing = Math.sin(t) * 0.4;
+      // Footstep on zero-crossings
+      if (prevSwing.current * swing < 0) playFootstep();
+      prevSwing.current = swing;
       if (leftLegRef.current) leftLegRef.current.rotation.x = swing;
       if (rightLegRef.current) rightLegRef.current.rotation.x = -swing;
       if (leftArmRef.current) {
