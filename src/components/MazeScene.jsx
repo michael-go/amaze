@@ -3,16 +3,28 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "../lib/useKeyboardControls";
 import * as THREE from "three";
 import { Sky, Stars } from "@react-three/drei";
-import { getWallBoxes, CELL_SIZE } from "../lib/maze";
+import {
+  getWallBoxes,
+  CELL_SIZE,
+  WALL_HEIGHT,
+  MAGIC_GHOST,
+  MAGIC_FLY,
+  nearestCorridor,
+} from "../lib/maze";
 import { levelTheme } from "../lib/wallTexture";
 import { MazeFloor, MazeWalls, PlayerLight, StartMarker } from "./MazeElements";
 import KidCharacter from "./KidCharacter";
 import TreasureChest from "./TreasureChest";
+import MagicItem from "./MagicItem";
 
 const PLAYER_SPEED = 5;
 const TURN_SPEED = 2.5;
 const PLAYER_RADIUS = 0.4;
 const EXIT_RADIUS = 1.2;
+const PICKUP_RADIUS = 1.0;
+const GHOST_DURATION = 5;
+const FLY_DURATION = 5;
+const FLY_HEIGHT = WALL_HEIGHT + 1.5;
 
 // Third-person camera offset
 const CAM_BEHIND = 2.0;
@@ -27,6 +39,10 @@ export default function MazeScene({
   won,
   frozen,
   onStepUsed,
+  magicItems,
+  onPickupItem,
+  activePower,
+  onPowerEnd,
 }) {
   const theme = levelTheme(level);
   const { camera } = useThree();
@@ -36,6 +52,9 @@ export default function MazeScene({
   const yaw = useRef(Math.PI);
   const isMoving = useRef(false);
   const distAccum = useRef(0);
+  const powerTimer = useRef(0);
+  const flyLanding = useRef(false);
+  const playerY = useRef(0);
 
   const wallBoxes = useMemo(() => getWallBoxes(game.cells), [game.cells]);
   const wallBoxesRef = useRef(wallBoxes);
@@ -45,6 +64,9 @@ export default function MazeScene({
     playerPos.current.set(...game.startPos);
     yaw.current = Math.PI;
     distAccum.current = 0;
+    powerTimer.current = 0;
+    flyLanding.current = false;
+    playerY.current = 0;
   }, [game]);
 
   function collidesWithWall(nx, nz) {
@@ -64,6 +86,8 @@ export default function MazeScene({
 
   useFrame((_, delta) => {
     const pos = playerPos.current;
+    const isGhost = activePower === MAGIC_GHOST;
+    const isFlying = activePower === MAGIC_FLY;
 
     if (topView) {
       // Top-down camera
@@ -74,7 +98,6 @@ export default function MazeScene({
       const mazeH = game.height * CELL_SIZE;
       const fovRad = (camera.fov * Math.PI) / 180;
       const aspect = camera.aspect || 1;
-      // Height needed to fit maze vertically and horizontally
       const hForH = mazeH / 2 / Math.tan(fovRad / 2);
       const hForW = mazeW / 2 / Math.tan(fovRad / 2) / aspect;
       const camHeight = Math.max(hForH, hForW) * 1.1;
@@ -91,6 +114,38 @@ export default function MazeScene({
     }
 
     if (won || frozen) return;
+
+    // Power-up timer
+    if (activePower) {
+      powerTimer.current += delta;
+      const duration = isGhost ? GHOST_DURATION : FLY_DURATION;
+      if (powerTimer.current >= duration) {
+        powerTimer.current = 0;
+        // Snap to nearest corridor so player doesn't end up stuck inside a wall
+        const landing = nearestCorridor(pos.x, pos.z, game.cells);
+        pos.x = landing.x;
+        pos.z = landing.z;
+        if (isFlying) {
+          flyLanding.current = true;
+        }
+        onPowerEnd();
+      }
+    }
+
+    // Smooth fly height transition
+    const targetY = isFlying ? FLY_HEIGHT : 0;
+    if (flyLanding.current && playerY.current > 0.05) {
+      playerY.current = THREE.MathUtils.lerp(playerY.current, 0, 6 * delta);
+    } else if (flyLanding.current) {
+      playerY.current = 0;
+      flyLanding.current = false;
+    } else {
+      playerY.current = THREE.MathUtils.lerp(
+        playerY.current,
+        targetY,
+        4 * delta,
+      );
+    }
 
     if (!topView) {
       // Turning
@@ -125,21 +180,29 @@ export default function MazeScene({
           oz = pos.z;
         const nx = pos.x + dx;
         const nz = pos.z + dz;
-        if (!collidesWithWall(nx, pos.z)) pos.x = nx;
-        if (!collidesWithWall(pos.x, nz)) pos.z = nz;
+        // Ghost and fly modes skip wall collision
+        if (isGhost || isFlying) {
+          pos.x = nx;
+          pos.z = nz;
+        } else {
+          if (!collidesWithWall(nx, pos.z)) pos.x = nx;
+          if (!collidesWithWall(pos.x, nz)) pos.z = nz;
+        }
 
-        // Track distance for step counting
-        const moved = Math.sqrt((pos.x - ox) ** 2 + (pos.z - oz) ** 2);
-        if (moved > 0 && onStepUsed) {
-          distAccum.current += moved;
-          while (distAccum.current >= 1) {
-            distAccum.current -= 1;
-            onStepUsed();
+        // Track distance for step counting (flying doesn't cost steps)
+        if (!isFlying) {
+          const moved = Math.sqrt((pos.x - ox) ** 2 + (pos.z - oz) ** 2);
+          if (moved > 0 && onStepUsed) {
+            distAccum.current += moved;
+            while (distAccum.current >= 1) {
+              distAccum.current -= 1;
+              onStepUsed();
+            }
           }
         }
       }
 
-      // Clamp to maze bounds so player can't escape through entry/exit openings
+      // Clamp to maze bounds
       const margin = PLAYER_RADIUS;
       pos.x = Math.max(
         margin,
@@ -150,11 +213,25 @@ export default function MazeScene({
         Math.min(game.height * CELL_SIZE - margin, pos.z),
       );
 
+      // Check magic item pickup
+      if (magicItems && onPickupItem && !activePower) {
+        for (let i = 0; i < magicItems.length; i++) {
+          const item = magicItems[i];
+          const dx2 = pos.x - item.worldX;
+          const dz2 = pos.z - item.worldZ;
+          if (Math.sqrt(dx2 * dx2 + dz2 * dz2) < PICKUP_RADIUS) {
+            powerTimer.current = 0;
+            onPickupItem(i);
+            break;
+          }
+        }
+      }
+
       // Third-person camera: behind and above the player
       camera.up.set(0, 1, 0);
       const idealX = pos.x + Math.sin(yaw.current) * CAM_BEHIND;
       const idealZ = pos.z + Math.cos(yaw.current) * CAM_BEHIND;
-      const idealY = CAM_HEIGHT;
+      const idealY = CAM_HEIGHT + playerY.current;
 
       camera.position.set(
         THREE.MathUtils.lerp(camera.position.x, idealX, CAM_LERP * delta),
@@ -162,12 +239,11 @@ export default function MazeScene({
         THREE.MathUtils.lerp(camera.position.z, idealZ, CAM_LERP * delta),
       );
 
-      // Look at a point slightly above the player
-      camera.lookAt(pos.x, 1.0, pos.z);
+      camera.lookAt(pos.x, 1.0 + playerY.current, pos.z);
     }
 
-    // Check win
-    if (!won && !frozen) {
+    // Check win (only when on the ground)
+    if (!won && !frozen && !isFlying) {
       const ex = game.exitPos[0];
       const ez = game.exitPos[2];
       const dist = Math.sqrt((pos.x - ex) ** 2 + (pos.z - ez) ** 2);
@@ -204,7 +280,17 @@ export default function MazeScene({
       <MazeWalls wallBoxes={wallBoxes} theme={theme} />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
-      <KidCharacter playerPos={playerPos} yaw={yaw} isMoving={isMoving} />
+      {magicItems &&
+        magicItems.map((item, i) => (
+          <MagicItem key={`${item.cellX}-${item.cellY}`} item={item} />
+        ))}
+      <KidCharacter
+        playerPos={playerPos}
+        yaw={yaw}
+        isMoving={isMoving}
+        activePower={activePower}
+        playerY={playerY}
+      />
     </>
   );
 }

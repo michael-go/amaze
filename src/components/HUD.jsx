@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useI18n } from "../lib/i18n";
 
 export default function HUD({
@@ -7,9 +8,30 @@ export default function HUD({
   won,
   stepsRemaining,
   maxSteps,
+  activePower,
+  powerEndTime,
 }) {
   const { t } = useI18n();
   const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1;
+
+  // Power-up countdown
+  const [powerSecs, setPowerSecs] = useState(0);
+  useEffect(() => {
+    if (!activePower || !powerEndTime) {
+      setPowerSecs(0);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((powerEndTime - Date.now()) / 1000),
+      );
+      setPowerSecs(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 200);
+    return () => clearInterval(id);
+  }, [activePower, powerEndTime]);
   const barColor =
     pct > 0.6
       ? "#44bb44"
@@ -46,6 +68,64 @@ export default function HUD({
         </button>
       </div>
       <div style={styles.controls}>{t.controls}</div>
+      {activePower && powerSecs > 0 && (
+        <PowerBanner activePower={activePower} powerSecs={powerSecs} t={t} />
+      )}
+    </div>
+  );
+}
+
+function PowerBanner({ activePower, powerSecs, t }) {
+  const isGhost = activePower === "ghost";
+  const color = isGhost ? "#44aaff" : "#ffcc00";
+  const glow = isGhost ? "rgba(68,170,255,0.4)" : "rgba(255,204,0,0.4)";
+  const label = isGhost ? t.powerGhost : t.powerFly;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "12%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        textAlign: "center",
+        animation: "power-pulse 1s ease-in-out infinite",
+        background: "rgba(0,0,0,0.5)",
+        padding: "12px 28px",
+        borderRadius: 12,
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "clamp(22px, 4vw, 36px)",
+          fontFamily: "inherit",
+          fontWeight: "bold",
+          color,
+          textShadow: `0 0 20px ${glow}, 0 0 40px ${glow}`,
+          letterSpacing: 3,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "clamp(36px, 7vw, 56px)",
+          fontFamily: "'Courier New', monospace",
+          fontWeight: "bold",
+          color,
+          textShadow: `0 0 30px ${glow}`,
+          marginTop: 4,
+        }}
+      >
+        {powerSecs}
+      </div>
+      <style>{`
+        @keyframes power-pulse {
+          0%, 100% { opacity: 0.85; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

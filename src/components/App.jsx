@@ -5,7 +5,7 @@ import HUD from "./HUD";
 import QuizModal from "./QuizModal";
 import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
-import { generateMaze, CELL_SIZE } from "../lib/maze";
+import { generateMaze, CELL_SIZE, placeMagicItems } from "../lib/maze";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
 
@@ -55,6 +55,9 @@ export default function App() {
     } catch {}
     return ["+", "-"];
   });
+  const [magicItems, setMagicItems] = useState([]);
+  const [activePower, setActivePower] = useState(null);
+  const [powerEndTime, setPowerEndTime] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -78,6 +81,11 @@ export default function App() {
     const ms = Math.ceil(g.width * g.height * CELL_SIZE * 0.45);
     setMaxSteps(ms);
     setStepsRemaining(ms);
+    // Place magic items — more items on bigger mazes
+    const itemCount = Math.min(2 + Math.floor(lvl / 2), 6);
+    setMagicItems(placeMagicItems(g.cells, itemCount));
+    setActivePower(null);
+    setPowerEndTime(0);
   }, []);
 
   useEffect(() => {
@@ -134,6 +142,32 @@ export default function App() {
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const onPickupItem = useCallback((index) => {
+    setMagicItems((prev) => {
+      const item = prev[index];
+      setActivePower(item.type);
+      setPowerEndTime(Date.now() + 5000);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const onPowerEnd = useCallback(() => {
+    setActivePower(null);
+    setPowerEndTime(0);
+  }, []);
+
+  // Debug: expose fly/ghost toggle globally
+  useEffect(() => {
+    window.__debugFly = () => {
+      setActivePower((prev) => (prev === "fly" ? null : "fly"));
+      setPowerEndTime(Date.now() + 999000);
+    };
+    window.__debugGhost = () => {
+      setActivePower((prev) => (prev === "ghost" ? null : "ghost"));
+      setPowerEndTime(Date.now() + 999000);
+    };
   }, []);
 
   const startGame = useCallback(() => {
@@ -293,6 +327,10 @@ export default function App() {
             (stepsRemaining <= 0 && screen === "playing")
           }
           onStepUsed={onStepUsed}
+          magicItems={magicItems}
+          onPickupItem={onPickupItem}
+          activePower={activePower}
+          onPowerEnd={onPowerEnd}
         />
       </Canvas>
 
@@ -311,6 +349,8 @@ export default function App() {
         won={won}
         stepsRemaining={stepsRemaining}
         maxSteps={maxSteps}
+        activePower={activePower}
+        powerEndTime={powerEndTime}
       />
 
       {quizInfo && (

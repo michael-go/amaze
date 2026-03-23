@@ -1,6 +1,10 @@
 // Recursive backtracking maze generator
 // Returns a 2D grid where each cell has { top, right, bottom, left } walls
 
+// Magic item types
+export const MAGIC_GHOST = "ghost"; // walk through walls
+export const MAGIC_FLY = "fly"; // float above walls
+
 export function generateMaze(width, height) {
   const cells = Array.from({ length: height }, (_, y) =>
     Array.from({ length: width }, (_, x) => ({
@@ -160,4 +164,51 @@ export function getWallBoxes(cells) {
   }
 
   return boxes;
+}
+
+// Place magic items in random corridor cells (avoiding start/exit)
+export function placeMagicItems(cells, count) {
+  const height = cells.length;
+  const width = cells[0].length;
+  const types = [MAGIC_GHOST, MAGIC_FLY];
+  const items = [];
+  const used = new Set();
+  used.add("0,0");
+  used.add(`${width - 1},${height - 1}`);
+
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    while (attempts < 100) {
+      const x = Math.floor(Math.random() * width);
+      const y = Math.floor(Math.random() * height);
+      const key = `${x},${y}`;
+      if (!used.has(key)) {
+        used.add(key);
+        items.push({
+          type: types[i % types.length],
+          cellX: x,
+          cellY: y,
+          worldX: x * CELL_SIZE + CELL_SIZE / 2,
+          worldZ: y * CELL_SIZE + CELL_SIZE / 2,
+        });
+        break;
+      }
+      attempts++;
+    }
+  }
+  return items;
+}
+
+// Find the nearest corridor cell center from a world position
+export function nearestCorridor(worldX, worldZ, cells) {
+  const height = cells.length;
+  const width = cells[0].length;
+  // Clamp to grid
+  const cx = Math.max(0, Math.min(width - 1, Math.floor(worldX / CELL_SIZE)));
+  const cz = Math.max(0, Math.min(height - 1, Math.floor(worldZ / CELL_SIZE)));
+  // The cell the player is above is always a valid corridor
+  return {
+    x: cx * CELL_SIZE + CELL_SIZE / 2,
+    z: cz * CELL_SIZE + CELL_SIZE / 2,
+  };
 }

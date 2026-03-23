@@ -106,37 +106,95 @@ function BrimGeometry() {
   return <primitive object={geo} />;
 }
 
-export default function KidCharacter({ playerPos, yaw, isMoving }) {
+export default function KidCharacter({
+  playerPos,
+  yaw,
+  isMoving,
+  activePower,
+  playerY,
+}) {
   const groupRef = useRef();
   const leftLegRef = useRef();
   const rightLegRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
+  const auraRef = useRef();
+
+  const isGhost = activePower === "ghost";
+  const isFlying = activePower === "fly";
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const p = playerPos.current;
-    groupRef.current.position.set(p.x, 0, p.z);
+    const yOff = playerY ? playerY.current : 0;
+    groupRef.current.position.set(p.x, yOff, p.z);
     groupRef.current.rotation.y = yaw.current + Math.PI;
 
-    if (isMoving.current) {
+    if (isFlying) {
+      // Flying pose: arms out to sides, legs trailing back, gentle sway
+      const t = clock.elapsedTime;
+      const flap = Math.sin(t * 2) * 0.12;
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.set(0, 0, -1.3 - flap);
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.set(0, 0, 1.3 + flap);
+      }
+      if (leftLegRef.current) leftLegRef.current.rotation.set(0.3, 0, 0);
+      if (rightLegRef.current) rightLegRef.current.rotation.set(0.3, 0, 0);
+      // Gentle hovering bob
+      groupRef.current.position.y = yOff + Math.sin(t * 1.5) * 0.08;
+    } else if (isMoving.current) {
       const t = clock.elapsedTime * 8;
       const swing = Math.sin(t) * 0.4;
       if (leftLegRef.current) leftLegRef.current.rotation.x = swing;
       if (rightLegRef.current) rightLegRef.current.rotation.x = -swing;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = -swing;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = swing;
-      groupRef.current.position.y = Math.abs(Math.sin(t)) * 0.05;
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = -swing;
+        leftArmRef.current.rotation.z = 0;
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = swing;
+        rightArmRef.current.rotation.z = 0;
+      }
+      groupRef.current.position.y = yOff + Math.abs(Math.sin(t)) * 0.05;
     } else {
       if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
       if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = 0;
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = 0;
+        leftArmRef.current.rotation.z = 0;
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = 0;
+        rightArmRef.current.rotation.z = 0;
+      }
+    }
+
+    // Aura pulse
+    if (auraRef.current) {
+      const t = clock.elapsedTime;
+      auraRef.current.scale.setScalar(1 + Math.sin(t * 4) * 0.15);
+      auraRef.current.material.opacity = 0.15 + Math.sin(t * 3) * 0.08;
     }
   });
 
   return (
     <group ref={groupRef}>
+      {/* Power-up aura */}
+      {(isGhost || isFlying) && (
+        <mesh ref={auraRef} position={[0, 0.85, 0]}>
+          <sphereGeometry args={[0.6, 16, 16]} />
+          <meshStandardMaterial
+            color={isGhost ? "#44aaff" : "#ffcc00"}
+            emissive={isGhost ? "#2266ff" : "#ff8800"}
+            emissiveIntensity={0.5}
+            transparent
+            opacity={0.2}
+            side={2}
+          />
+        </mesh>
+      )}
       <mesh position={[0, 1.35, 0]}>
         <sphereGeometry args={[0.22, 16, 16]} />
         <meshStandardMaterial color="#fdd9b5" />
