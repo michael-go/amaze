@@ -100,7 +100,8 @@ export default function App() {
           });
       }
       if (e.code === "Space" && screen === "title") {
-        beginLevel(0, newGame(0));
+        const lvl = savedLevel > 0 ? savedLevel : 0;
+        beginLevel(lvl, newGame(lvl));
       }
       if (e.code === "Space" && screen === "countdown") {
         setTopView(false);
