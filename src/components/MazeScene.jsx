@@ -289,9 +289,9 @@ export default function MazeScene({
       )}
 
       <Sky
-        sunPosition={[100, 20, 100]}
+        sunPosition={[100, -5, 100]}
         turbidity={8}
-        rayleigh={2}
+        rayleigh={0.5}
         mieCoefficient={0.005}
         mieDirectionalG={0.8}
       />
