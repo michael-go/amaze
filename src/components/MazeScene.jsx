@@ -229,9 +229,30 @@ export default function MazeScene({
 
       // Third-person camera: behind and above the player
       camera.up.set(0, 1, 0);
-      const idealX = pos.x + Math.sin(yaw.current) * CAM_BEHIND;
-      const idealZ = pos.z + Math.cos(yaw.current) * CAM_BEHIND;
-      const idealY = CAM_HEIGHT + playerY.current;
+      const behindX = Math.sin(yaw.current);
+      const behindZ = Math.cos(yaw.current);
+      let camDist = CAM_BEHIND;
+
+      // When on the ground, pull camera in if it would clip through a wall
+      if (!isFlying) {
+        const steps = 8;
+        for (let s = 1; s <= steps; s++) {
+          const t = (s / steps) * CAM_BEHIND;
+          const tx = pos.x + behindX * t;
+          const tz = pos.z + behindZ * t;
+          if (collidesWithWall(tx, tz)) {
+            camDist = Math.max(((s - 1) / steps) * CAM_BEHIND, 0.3);
+            break;
+          }
+        }
+      }
+
+      // When pulled in, raise camera above the walls so it doesn't clip
+      const pullRatio = 1 - camDist / CAM_BEHIND;
+      const extraHeight = pullRatio * (WALL_HEIGHT + 0.5 - CAM_HEIGHT);
+      const idealX = pos.x + behindX * camDist;
+      const idealZ = pos.z + behindZ * camDist;
+      const idealY = CAM_HEIGHT + playerY.current + extraHeight;
 
       camera.position.set(
         THREE.MathUtils.lerp(camera.position.x, idealX, CAM_LERP * delta),
