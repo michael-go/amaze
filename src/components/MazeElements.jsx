@@ -19,15 +19,15 @@ export function PlayerLight({ playerPos }) {
   const ref = useRef();
   useFrame(() => {
     if (ref.current) {
-      ref.current.position.set(playerPos.current.x, 2.2, playerPos.current.z);
+      ref.current.position.set(playerPos.current.x, 4, playerPos.current.z);
     }
   });
   return (
     <pointLight
       ref={ref}
-      intensity={20}
-      distance={25}
-      color="#ffeedd"
+      intensity={30}
+      distance={30}
+      color="#ccd0e0"
       decay={2}
     />
   );
