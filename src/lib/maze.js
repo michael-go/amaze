@@ -185,7 +185,11 @@ export function placeMagicItems(cells, count) {
       const x = Math.floor(Math.random() * width);
       const y = Math.floor(Math.random() * height);
       const key = `${x},${y}`;
-      if (!used.has(key)) {
+      // Ensure minimum 3-cell distance from all other items
+      const tooClose = items.some(
+        (it) => Math.abs(it.cellX - x) + Math.abs(it.cellY - y) < 3,
+      );
+      if (!used.has(key) && !tooClose) {
         used.add(key);
         items.push({
           type: types[i % types.length],

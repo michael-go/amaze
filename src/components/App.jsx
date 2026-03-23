@@ -354,7 +354,8 @@ export default function App() {
           won={won}
           frozen={
             screen === "countdown" ||
-            (stepsRemaining <= 0 && screen === "playing")
+            (stepsRemaining <= 0 && screen === "playing") ||
+            !!quizInfo
           }
           onStepUsed={onStepUsed}
           magicItems={magicItems}
