@@ -4,6 +4,7 @@
 // Magic item types
 export const MAGIC_GHOST = "ghost"; // walk through walls
 export const MAGIC_FLY = "fly"; // float above walls
+export const MAGIC_TRAIL = "trail"; // show visited path on floor
 
 export function generateMaze(width, height) {
   const cells = Array.from({ length: height }, (_, y) =>
@@ -170,7 +171,7 @@ export function getWallBoxes(cells) {
 export function placeMagicItems(cells, count) {
   const height = cells.length;
   const width = cells[0].length;
-  const types = [MAGIC_GHOST, MAGIC_FLY];
+  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL];
   const items = [];
   const used = new Set();
   used.add("0,0");

@@ -58,6 +58,7 @@ export default function App() {
   const [magicItems, setMagicItems] = useState([]);
   const [activePower, setActivePower] = useState(null);
   const [powerEndTime, setPowerEndTime] = useState(0);
+  const [trailActive, setTrailActive] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -86,6 +87,7 @@ export default function App() {
     setMagicItems(placeMagicItems(g.cells, itemCount));
     setActivePower(null);
     setPowerEndTime(0);
+    setTrailActive(false);
   }, []);
 
   useEffect(() => {
@@ -148,8 +150,12 @@ export default function App() {
   const onPickupItem = useCallback((index) => {
     setMagicItems((prev) => {
       const item = prev[index];
-      setActivePower(item.type);
-      setPowerEndTime(Date.now() + 5000);
+      if (item.type === "trail") {
+        setTrailActive(true);
+      } else {
+        setActivePower(item.type);
+        setPowerEndTime(Date.now() + 5000);
+      }
       return prev.filter((_, i) => i !== index);
     });
   }, []);
@@ -159,16 +165,16 @@ export default function App() {
     setPowerEndTime(0);
   }, []);
 
-  // Debug: expose fly/ghost toggle globally
-  useEffect(() => {
-    window.__debugFly = () => {
-      setActivePower((prev) => (prev === "fly" ? null : "fly"));
-      setPowerEndTime(Date.now() + 999000);
-    };
-    window.__debugGhost = () => {
-      setActivePower((prev) => (prev === "ghost" ? null : "ghost"));
-      setPowerEndTime(Date.now() + 999000);
-    };
+  const debugGhost = useCallback(() => {
+    setActivePower((prev) => (prev === "ghost" ? null : "ghost"));
+    setPowerEndTime(Date.now() + 5000);
+  }, []);
+  const debugFly = useCallback(() => {
+    setActivePower((prev) => (prev === "fly" ? null : "fly"));
+    setPowerEndTime(Date.now() + 5000);
+  }, []);
+  const debugTrail = useCallback(() => {
+    setTrailActive((prev) => !prev);
   }, []);
 
   const startGame = useCallback(() => {
@@ -298,7 +304,13 @@ export default function App() {
             onClose={() => setShowSettings(false)}
           />
         )}
-        <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
+        <DebugPanel
+          level={level}
+          onJumpToLevel={jumpToLevel}
+          onGhost={debugGhost}
+          onFly={debugFly}
+          onTrail={debugTrail}
+        />
       </div>
     );
   }
@@ -332,6 +344,7 @@ export default function App() {
           onPickupItem={onPickupItem}
           activePower={activePower}
           onPowerEnd={onPowerEnd}
+          trailActive={trailActive}
         />
       </Canvas>
 
@@ -352,6 +365,7 @@ export default function App() {
         maxSteps={maxSteps}
         activePower={activePower}
         powerEndTime={powerEndTime}
+        trailActive={trailActive}
       />
 
       {quizInfo && (
@@ -443,7 +457,13 @@ export default function App() {
         &#9881;
       </button>
       <TouchControls />
-      <DebugPanel level={level} onJumpToLevel={jumpToLevel} />
+      <DebugPanel
+        level={level}
+        onJumpToLevel={jumpToLevel}
+        onGhost={debugGhost}
+        onFly={debugFly}
+        onTrail={debugTrail}
+      />
     </div>
   );
 }

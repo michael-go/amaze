@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "../lib/useKeyboardControls";
 import * as THREE from "three";
@@ -43,6 +43,7 @@ export default function MazeScene({
   onPickupItem,
   activePower,
   onPowerEnd,
+  trailActive,
 }) {
   const theme = levelTheme(level);
   const { camera } = useThree();
@@ -60,6 +61,29 @@ export default function MazeScene({
   const wallBoxesRef = useRef(wallBoxes);
   wallBoxesRef.current = wallBoxes;
 
+  // Trail: track visited cells
+  const [visitedCells, setVisitedCells] = useState(() => new Set());
+  const lastCell = useRef("");
+
+  const trackCell = useCallback((px, pz) => {
+    const cx = Math.floor(px / CELL_SIZE);
+    const cz = Math.floor(pz / CELL_SIZE);
+    const key = `${cx},${cz}`;
+    if (key !== lastCell.current) {
+      // Mark the cell we just left, not the one we're entering
+      const prev = lastCell.current;
+      lastCell.current = key;
+      if (prev) {
+        setVisitedCells((s) => {
+          if (s.has(prev)) return s;
+          const next = new Set(s);
+          next.add(prev);
+          return next;
+        });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     playerPos.current.set(...game.startPos);
     yaw.current = Math.PI;
@@ -67,6 +91,8 @@ export default function MazeScene({
     powerTimer.current = 0;
     flyLanding.current = false;
     playerY.current = 0;
+    setVisitedCells(new Set());
+    lastCell.current = "";
   }, [game]);
 
   function collidesWithWall(nx, nz) {
@@ -213,6 +239,9 @@ export default function MazeScene({
         Math.min(game.height * CELL_SIZE - margin, pos.z),
       );
 
+      // Track visited cells for trail
+      if (trailActive) trackCell(pos.x, pos.z);
+
       // Check magic item pickup
       if (magicItems && onPickupItem && !activePower) {
         for (let i = 0; i < magicItems.length; i++) {
@@ -305,6 +334,7 @@ export default function MazeScene({
         magicItems.map((item, i) => (
           <MagicItem key={`${item.cellX}-${item.cellY}`} item={item} />
         ))}
+      {trailActive && <TrailDots visitedCells={visitedCells} />}
       <KidCharacter
         playerPos={playerPos}
         yaw={yaw}
@@ -312,6 +342,60 @@ export default function MazeScene({
         activePower={activePower}
         playerY={playerY}
       />
+    </>
+  );
+}
+
+function TrailDots({ visitedCells }) {
+  const dots = useMemo(() => {
+    const arr = [];
+    for (const key of visitedCells) {
+      const [cx, cz] = key.split(",").map(Number);
+      arr.push({
+        key,
+        x: cx * CELL_SIZE + CELL_SIZE / 2,
+        z: cz * CELL_SIZE + CELL_SIZE / 2,
+      });
+    }
+    return arr;
+  }, [visitedCells]);
+
+  const footMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#44ee88",
+        emissive: "#44ee88",
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.6,
+      }),
+    [],
+  );
+
+  return (
+    <>
+      {dots.map((d) => (
+        <group key={d.key} position={[d.x, 0.015, d.z]}>
+          {/* Left foot */}
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[-0.12, 0, 0]}
+            scale={[0.6, 1, 1]}
+            material={footMat}
+          >
+            <circleGeometry args={[0.13, 8]} />
+          </mesh>
+          {/* Right foot */}
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0.12, 0, 0.18]}
+            scale={[0.6, 1, 1]}
+            material={footMat}
+          >
+            <circleGeometry args={[0.13, 8]} />
+          </mesh>
+        </group>
+      ))}
     </>
   );
 }

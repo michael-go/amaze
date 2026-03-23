@@ -10,6 +10,7 @@ export default function HUD({
   maxSteps,
   activePower,
   powerEndTime,
+  trailActive,
 }) {
   const { t } = useI18n();
   const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1;
@@ -32,6 +33,18 @@ export default function HUD({
     const id = setInterval(tick, 200);
     return () => clearInterval(id);
   }, [activePower, powerEndTime]);
+
+  // Brief flash when trail is activated
+  const [showTrailFlash, setShowTrailFlash] = useState(false);
+  useEffect(() => {
+    if (trailActive) {
+      setShowTrailFlash(true);
+      const id = setTimeout(() => setShowTrailFlash(false), 2000);
+      return () => clearTimeout(id);
+    }
+    setShowTrailFlash(false);
+  }, [trailActive]);
+
   const barColor =
     pct > 0.6
       ? "#44bb44"
@@ -61,6 +74,19 @@ export default function HUD({
             </div>
           </div>
         )}
+        {trailActive && (
+          <div
+            style={{
+              marginTop: 10,
+              color: "#44ee88",
+              fontFamily: "inherit",
+              fontSize: 13,
+              letterSpacing: 1,
+            }}
+          >
+            {t.powerTrail}
+          </div>
+        )}
       </div>
       <div style={styles.right}>
         <button style={styles.viewBtn} onClick={onToggleView}>
@@ -71,15 +97,22 @@ export default function HUD({
       {activePower && powerSecs > 0 && (
         <PowerBanner activePower={activePower} powerSecs={powerSecs} t={t} />
       )}
+      {showTrailFlash && (
+        <PowerBanner activePower="trail" powerSecs={null} t={t} />
+      )}
     </div>
   );
 }
 
 function PowerBanner({ activePower, powerSecs, t }) {
-  const isGhost = activePower === "ghost";
-  const color = isGhost ? "#44aaff" : "#ffcc00";
-  const glow = isGhost ? "rgba(68,170,255,0.4)" : "rgba(255,204,0,0.4)";
-  const label = isGhost ? t.powerGhost : t.powerFly;
+  const colors = {
+    ghost: { color: "#44aaff", glow: "rgba(68,170,255,0.4)" },
+    fly: { color: "#ffcc00", glow: "rgba(255,204,0,0.4)" },
+    trail: { color: "#44ee88", glow: "rgba(68,238,136,0.4)" },
+  };
+  const { color, glow } = colors[activePower] || colors.ghost;
+  const labels = { ghost: t.powerGhost, fly: t.powerFly, trail: t.powerTrail };
+  const label = labels[activePower] || "";
 
   return (
     <div
@@ -108,18 +141,20 @@ function PowerBanner({ activePower, powerSecs, t }) {
       >
         {label}
       </div>
-      <div
-        style={{
-          fontSize: "clamp(36px, 7vw, 56px)",
-          fontFamily: "'Courier New', monospace",
-          fontWeight: "bold",
-          color,
-          textShadow: `0 0 30px ${glow}`,
-          marginTop: 4,
-        }}
-      >
-        {powerSecs}
-      </div>
+      {powerSecs != null && (
+        <div
+          style={{
+            fontSize: "clamp(36px, 7vw, 56px)",
+            fontFamily: "'Courier New', monospace",
+            fontWeight: "bold",
+            color,
+            textShadow: `0 0 30px ${glow}`,
+            marginTop: 4,
+          }}
+        >
+          {powerSecs}
+        </div>
+      )}
       <style>{`
         @keyframes power-pulse {
           0%, 100% { opacity: 0.85; }
