@@ -44,6 +44,7 @@ export default function MazeScene({
   activePower,
   onPowerEnd,
   trailActive,
+  skippedItem,
 }) {
   const theme = levelTheme(level);
   const { camera } = useThree();
@@ -56,6 +57,7 @@ export default function MazeScene({
   const powerTimer = useRef(0);
   const flyLanding = useRef(false);
   const playerY = useRef(0);
+  const skipCleared = useRef(false);
 
   const wallBoxes = useMemo(() => getWallBoxes(game.cells), [game.cells]);
   const wallBoxesRef = useRef(wallBoxes);
@@ -244,12 +246,24 @@ export default function MazeScene({
 
       // Check magic item pickup
       if (magicItems && onPickupItem && !activePower) {
+        // After quiz cancel, wait until player moves away before re-triggering
+        if (skippedItem >= 0 && skippedItem < magicItems.length) {
+          const si = magicItems[skippedItem];
+          const sd = Math.sqrt(
+            (pos.x - si.worldX) ** 2 + (pos.z - si.worldZ) ** 2,
+          );
+          if (sd >= PICKUP_RADIUS) skipCleared.current = true;
+        } else {
+          skipCleared.current = true;
+        }
         for (let i = 0; i < magicItems.length; i++) {
+          if (i === skippedItem && !skipCleared.current) continue;
           const item = magicItems[i];
           const dx2 = pos.x - item.worldX;
           const dz2 = pos.z - item.worldZ;
           if (Math.sqrt(dx2 * dx2 + dz2 * dz2) < PICKUP_RADIUS) {
             powerTimer.current = 0;
+            skipCleared.current = false;
             onPickupItem(i);
             break;
           }

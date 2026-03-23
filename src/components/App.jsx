@@ -59,6 +59,7 @@ export default function App() {
   const [activePower, setActivePower] = useState(null);
   const [powerEndTime, setPowerEndTime] = useState(0);
   const [trailActive, setTrailActive] = useState(false);
+  const [skippedItem, setSkippedItem] = useState(-1);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -147,18 +148,31 @@ export default function App() {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
   }, []);
 
-  const onPickupItem = useCallback((index) => {
-    setMagicItems((prev) => {
-      const item = prev[index];
-      if (item.type === "trail") {
-        setTrailActive(true);
-        return prev.filter((it) => it.type !== "trail");
-      }
-      setActivePower(item.type);
-      setPowerEndTime(Date.now() + 5000);
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
+  const onPickupItem = useCallback(
+    (index) => {
+      const collectItem = () => {
+        setSkippedItem(-1);
+        setMagicItems((prev) => {
+          const item = prev[index];
+          if (!item) return prev;
+          if (item.type === "trail") {
+            setTrailActive(true);
+            return prev.filter((it) => it.type !== "trail");
+          }
+          setActivePower(item.type);
+          setPowerEndTime(Date.now() + 5000);
+          return prev.filter((_, i) => i !== index);
+        });
+      };
+      setQuizInfo({
+        onSuccess: collectItem,
+        canCancel: true,
+        prompt: t.quizMagicPrompt,
+        onCancel: () => setSkippedItem(index),
+      });
+    },
+    [t],
+  );
 
   const onPowerEnd = useCallback(() => {
     setActivePower(null);
@@ -345,6 +359,7 @@ export default function App() {
           activePower={activePower}
           onPowerEnd={onPowerEnd}
           trailActive={trailActive}
+          skippedItem={skippedItem}
         />
       </Canvas>
 
@@ -375,7 +390,14 @@ export default function App() {
             quizInfo.onSuccess();
             setQuizInfo(null);
           }}
-          onCancel={quizInfo.canCancel ? () => setQuizInfo(null) : undefined}
+          onCancel={
+            quizInfo.canCancel
+              ? () => {
+                  quizInfo.onCancel?.();
+                  setQuizInfo(null);
+                }
+              : undefined
+          }
           prompt={quizInfo.prompt}
         />
       )}
