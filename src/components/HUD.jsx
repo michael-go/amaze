@@ -56,37 +56,33 @@ export default function HUD({
 
   return (
     <div style={{ ...styles.hud, direction: t.dir, fontFamily: t.font }}>
-      <div style={styles.left}>
-        <span style={{ ...styles.levelBadge, fontSize: 20 }}>
-          {t.level} {level}
-        </span>
-        {!won && (
-          <div style={styles.stepsBar}>
-            <div style={{ ...styles.stepsLabel, fontSize: 14 }}>{t.steps}</div>
-            <div style={styles.stepsTrack}>
-              <div
-                style={{
-                  ...styles.stepsFill,
-                  width: `${pct * 100}%`,
-                  background: barColor,
-                }}
-              />
-            </div>
-          </div>
-        )}
+      <div style={styles.topRow}>
         {trailActive && (
-          <div
-            style={{
-              marginTop: 10,
-              color: "#44ee88",
-              fontFamily: "inherit",
-              fontSize: 13,
-              letterSpacing: 1,
-            }}
-          >
-            {t.powerTrail}
+          <div style={styles.trailBox}>
+            <span style={{ fontSize: 20 }}>🐾</span>
           </div>
         )}
+        <div style={styles.left}>
+          <span style={{ ...styles.levelBadge, fontSize: 20 }}>
+            {t.level} {level}
+          </span>
+          {!won && (
+            <div style={styles.stepsBar}>
+              <div style={{ ...styles.stepsLabel, fontSize: 14 }}>
+                {t.steps}
+              </div>
+              <div style={styles.stepsTrack}>
+                <div
+                  style={{
+                    ...styles.stepsFill,
+                    width: `${pct * 100}%`,
+                    background: barColor,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <div style={styles.right}>
         <button style={styles.viewBtn} onClick={onToggleView}>
@@ -172,10 +168,22 @@ const styles = {
     pointerEvents: "none",
     zIndex: 10,
   },
-  left: {
+  topRow: {
     position: "absolute",
     top: 16,
     left: 20,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  trailBox: {
+    background: "rgba(0,0,0,0.45)",
+    padding: "10px 12px",
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+  },
+  left: {
     background: "rgba(0,0,0,0.45)",
     padding: "10px 16px",
     borderRadius: 8,
@@ -195,15 +203,16 @@ const styles = {
     textShadow: "0 0 10px #ff6b35",
   },
   viewBtn: {
-    background: "rgba(0,0,0,0.45)",
+    background: "rgba(0,0,0,0.55)",
     color: "#fff",
-    border: "1px solid #444",
-    padding: "8px 16px",
+    border: "2px solid #ff6b35",
+    padding: "10px 18px",
     fontFamily: "inherit",
-    fontSize: 13,
+    fontSize: 14,
     cursor: "pointer",
-    borderRadius: 4,
+    borderRadius: 6,
     letterSpacing: 1,
+    fontWeight: "bold",
   },
   stepsBar: {
     marginTop: 12,

@@ -20,7 +20,7 @@ const strings = {
     tapToSkip: "לחצו לדלג",
     steps: "🦶 צעדים",
     firstPerson: "👁 לחזור למבוך",
-    topView: "🗺 מבט על",
+    topView: "🗺 הפעלת מבט על",
     controls: "↑↓ · קדימה/אחורה | ←→ · סיבוב | T · החלף תצוגה",
     quizMapPrompt: "🗺️ !פתרו כדי לפתוח את המפה",
     quizStepsPrompt: "🦶 !נגמרו הצעדים! פתרו כדי להמשיך",
