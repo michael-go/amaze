@@ -207,8 +207,8 @@ export function placeMagicItems(cells, count) {
   return items;
 }
 
-// Place a single steps-refill item at a random spot, avoiding existing items
-export function placeStepsItem(cells, existingItems) {
+// Place a single magic item of given type at a random spot, avoiding existing items
+export function placeSingleItem(cells, existingItems, type = MAGIC_STEPS) {
   const height = cells.length;
   const width = cells[0].length;
   const used = new Set(["0,0", `${width - 1},${height - 1}`]);
@@ -223,7 +223,7 @@ export function placeStepsItem(cells, existingItems) {
     );
     if (!used.has(key) && !tooClose) {
       return {
-        type: MAGIC_STEPS,
+        type,
         cellX: x,
         cellY: y,
         worldX: x * CELL_SIZE + CELL_SIZE / 2,

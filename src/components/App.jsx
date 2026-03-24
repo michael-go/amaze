@@ -9,7 +9,9 @@ import {
   generateMaze,
   CELL_SIZE,
   placeMagicItems,
-  placeStepsItem,
+  placeSingleItem,
+  MAGIC_STEPS,
+  MAGIC_TRAIL,
 } from "../lib/maze";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
@@ -210,10 +212,15 @@ export default function App() {
           setStepsRemaining((prev) => prev + Math.ceil(maxSteps * 0.4));
           setStepsDepleted((prev) => {
             const next = prev + 1;
-            // Every 2nd depletion, spawn a steps-refill item
+            // Every 2nd depletion, spawn a bonus item
             if (next % 2 === 0) {
               setMagicItems((items) => {
-                const newItem = placeStepsItem(game.cells, items);
+                // Spawn trail if not yet active, with 50% chance; otherwise steps
+                const hasTrail =
+                  trailActive || items.some((it) => it.type === "trail");
+                const type =
+                  !hasTrail && Math.random() < 0.5 ? MAGIC_TRAIL : MAGIC_STEPS;
+                const newItem = placeSingleItem(game.cells, items, type);
                 return newItem ? [...items, newItem] : items;
               });
             }
@@ -224,7 +231,7 @@ export default function App() {
         prompt: t.quizStepsPrompt,
       });
     }
-  }, [stepsRemaining, maxSteps, screen, quizInfo, t, game.cells]);
+  }, [stepsRemaining, maxSteps, screen, quizInfo, t, game.cells, trailActive]);
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
