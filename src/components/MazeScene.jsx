@@ -349,6 +349,7 @@ export default function MazeScene({
           <MagicItem key={`${item.cellX}-${item.cellY}`} item={item} />
         ))}
       {trailActive && <TrailDots visitedCells={visitedCells} />}
+      {topView && <PlayerIndicator playerPos={playerPos} yaw={yaw} />}
       <KidCharacter
         playerPos={playerPos}
         yaw={yaw}
@@ -415,5 +416,41 @@ function TrailDots({ visitedCells }) {
         />
       ))}
     </>
+  );
+}
+
+function PlayerIndicator({ playerPos, yaw }) {
+  const groupRef = useRef();
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const p = playerPos.current;
+    groupRef.current.position.set(p.x, 0.03, p.z);
+    groupRef.current.rotation.y = yaw.current;
+  });
+
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    // Narrow end at player feet, fans out in facing direction
+    s.moveTo(0, 0); // narrow tip (at player feet)
+    s.lineTo(-0.8, 1.8); // forward left
+    s.lineTo(0.8, 1.8); // forward right
+    s.closePath();
+    return s;
+  }, []);
+
+  return (
+    <group ref={groupRef}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <shapeGeometry args={[shape]} />
+        <meshBasicMaterial
+          color="#ffcc44"
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
   );
 }
