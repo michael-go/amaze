@@ -464,6 +464,7 @@ export default function App() {
             onClose={() => setShowSettings(false)}
           />
         )}
+        <GitHubLink />
         <DebugPanel
           level={level}
           onJumpToLevel={jumpToLevel}
@@ -627,6 +628,7 @@ export default function App() {
         &#9881;
       </button>
       <TouchControls />
+      <GitHubLink />
       <DebugPanel
         level={level}
         onJumpToLevel={jumpToLevel}
@@ -634,6 +636,66 @@ export default function App() {
         onFly={debugFly}
         onTrail={debugTrail}
       />
+    </div>
+  );
+}
+
+function GitHubLink() {
+  const [show, setShow] = useState(false);
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: 12,
+        right: 12,
+        zIndex: 200,
+        pointerEvents: "all",
+      }}
+    >
+      {show && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 36,
+            right: 0,
+            background: "#111",
+            border: "1px solid #555",
+            borderRadius: 6,
+            padding: "8px 14px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <a
+            href="https://github.com/michael-go/amaze"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "#4488cc",
+              fontSize: 13,
+              fontFamily: "Courier New, monospace",
+            }}
+          >
+            github.com/michael-go/amaze
+          </a>
+        </div>
+      )}
+      <button
+        onClick={() => setShow((s) => !s)}
+        style={{
+          background: "rgba(0,0,0,0.4)",
+          color: "#888",
+          border: "1px solid #444",
+          padding: "6px 8px",
+          cursor: "pointer",
+          borderRadius: 4,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="#888">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+        </svg>
+      </button>
     </div>
   );
 }
