@@ -34,6 +34,68 @@ function newGame(level) {
   };
 }
 
+function TitleBackground() {
+  const canvasRef = useCallback((canvas) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const w = (canvas.width = window.innerWidth);
+    const h = (canvas.height = window.innerHeight);
+    const cellSize = 32;
+    const cols = Math.ceil(w / cellSize) + 2;
+    const rows = Math.ceil(h / cellSize) + 2;
+    ctx.fillStyle = "#0a0a1a";
+    ctx.fillRect(0, 0, w, h);
+    // Generate a real maze for the background
+    const cells = generateMaze(cols, rows);
+    ctx.strokeStyle = "#4488cc40";
+    ctx.lineWidth = 2;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const px = x * cellSize;
+        const py = y * cellSize;
+        const cell = cells[y][x];
+        if (cell.walls.top) {
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + cellSize, py);
+          ctx.stroke();
+        }
+        if (cell.walls.left) {
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px, py + cellSize);
+          ctx.stroke();
+        }
+        if (x === cols - 1 && cell.walls.right) {
+          ctx.beginPath();
+          ctx.moveTo(px + cellSize, py);
+          ctx.lineTo(px + cellSize, py + cellSize);
+          ctx.stroke();
+        }
+        if (y === rows - 1 && cell.walls.bottom) {
+          ctx.beginPath();
+          ctx.moveTo(px, py + cellSize);
+          ctx.lineTo(px + cellSize, py + cellSize);
+          ctx.stroke();
+        }
+      }
+    }
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: -1,
+        filter: "blur(2px)",
+        opacity: 0.7,
+      }}
+    />
+  );
+}
+
 function Key({ children }) {
   return <span style={styles.keyCap}>{children}</span>;
 }
@@ -227,7 +289,48 @@ export default function App() {
   if (screen === "title") {
     return (
       <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
+        <TitleBackground />
         <div style={styles.titleBox}>
+          <div style={{ marginBottom: 12 }}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 32 32"
+              width="64"
+              height="64"
+            >
+              <rect width="32" height="32" rx="4" fill="#1a1a2e" />
+              <g
+                stroke="#f59e0b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                fill="none"
+              >
+                <rect x="3" y="3" width="26" height="26" rx="1" />
+                <line
+                  x1="14"
+                  y1="3"
+                  x2="18"
+                  y2="3"
+                  stroke="#1a1a2e"
+                  strokeWidth="3.5"
+                />
+                <line
+                  x1="14"
+                  y1="29"
+                  x2="18"
+                  y2="29"
+                  stroke="#1a1a2e"
+                  strokeWidth="3.5"
+                />
+                <line x1="10" y1="3" x2="10" y2="12" />
+                <line x1="3" y1="16" x2="12" y2="16" />
+                <line x1="16" y1="10" x2="22" y2="10" />
+                <line x1="22" y1="10" x2="22" y2="20" />
+                <line x1="10" y1="22" x2="10" y2="29" />
+                <line x1="16" y1="20" x2="16" y2="29" />
+              </g>
+            </svg>
+          </div>
           <h1 style={{ ...styles.title, fontFamily: font }}>{t.title}</h1>
           <p style={{ ...styles.subtitle, fontFamily: font, fontSize: 18 }}>
             {t.subtitle}
@@ -307,10 +410,17 @@ export default function App() {
           >
             {langButton}
             <button
-              style={{ ...styles.langBtn, position: "static", fontSize: 24 }}
+              style={{
+                ...styles.langBtn,
+                position: "static",
+                fontSize: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
               onClick={() => setShowSettings(true)}
             >
-              &#9881;
+              <span style={{ fontSize: 22 }}>&#9881;</span> {t.settings}
             </button>
           </div>
         </div>
