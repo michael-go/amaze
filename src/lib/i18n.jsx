@@ -93,9 +93,12 @@ const strings = {
 const I18nContext = createContext();
 
 export function I18nProvider({ children }) {
-  const [lang, setLang] = useState(
-    () => localStorage.getItem("amaze:lang") || "he",
-  );
+  const [lang, setLang] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qLang = params.get("lang");
+    if (qLang === "en" || qLang === "he") return qLang;
+    return localStorage.getItem("amaze:lang") || "he";
+  });
   const toggle = useCallback(
     () =>
       setLang((l) => {
