@@ -49,9 +49,9 @@ export default function HUD({
     pct > 0.6
       ? "#44bb44"
       : pct > 0.35
-        ? "#ff6b35"
+        ? "#ffaa00"
         : pct > 0.15
-          ? "#ffaa00"
+          ? "#ff6b35"
           : "#ff2222";
 
   return (
