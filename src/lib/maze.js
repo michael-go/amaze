@@ -5,6 +5,7 @@
 export const MAGIC_GHOST = "ghost"; // walk through walls
 export const MAGIC_FLY = "fly"; // float above walls
 export const MAGIC_TRAIL = "trail"; // show visited path on floor
+export const MAGIC_STEPS = "steps"; // refill steps bar
 
 export function generateMaze(width, height) {
   const cells = Array.from({ length: height }, (_, y) =>
@@ -204,6 +205,33 @@ export function placeMagicItems(cells, count) {
     }
   }
   return items;
+}
+
+// Place a single steps-refill item at a random spot, avoiding existing items
+export function placeStepsItem(cells, existingItems) {
+  const height = cells.length;
+  const width = cells[0].length;
+  const used = new Set(["0,0", `${width - 1},${height - 1}`]);
+  for (const it of existingItems) used.add(`${it.cellX},${it.cellY}`);
+
+  for (let attempts = 0; attempts < 100; attempts++) {
+    const x = Math.floor(Math.random() * width);
+    const y = Math.floor(Math.random() * height);
+    const key = `${x},${y}`;
+    const tooClose = existingItems.some(
+      (it) => Math.abs(it.cellX - x) + Math.abs(it.cellY - y) < 3,
+    );
+    if (!used.has(key) && !tooClose) {
+      return {
+        type: MAGIC_STEPS,
+        cellX: x,
+        cellY: y,
+        worldX: x * CELL_SIZE + CELL_SIZE / 2,
+        worldZ: y * CELL_SIZE + CELL_SIZE / 2,
+      };
+    }
+  }
+  return null;
 }
 
 // Find the nearest corridor cell center from a world position

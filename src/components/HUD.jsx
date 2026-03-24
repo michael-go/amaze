@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useI18n } from "../lib/i18n";
 
 export default function HUD({
@@ -33,6 +33,24 @@ export default function HUD({
     const id = setInterval(tick, 200);
     return () => clearInterval(id);
   }, [activePower, powerEndTime]);
+
+  // Brief flash when steps are refilled by magic item
+  const [showStepsFlash, setShowStepsFlash] = useState(false);
+  const prevSteps = useRef(stepsRemaining);
+  useEffect(() => {
+    if (
+      stepsRemaining === maxSteps &&
+      prevSteps.current < maxSteps &&
+      prevSteps.current >= 0 &&
+      maxSteps > 0
+    ) {
+      setShowStepsFlash(true);
+      const id = setTimeout(() => setShowStepsFlash(false), 2000);
+      prevSteps.current = stepsRemaining;
+      return () => clearTimeout(id);
+    }
+    prevSteps.current = stepsRemaining;
+  }, [stepsRemaining, maxSteps]);
 
   // Brief flash when trail is activated
   const [showTrailFlash, setShowTrailFlash] = useState(false);
@@ -96,6 +114,9 @@ export default function HUD({
       {showTrailFlash && (
         <PowerBanner activePower="trail" powerSecs={null} t={t} />
       )}
+      {showStepsFlash && (
+        <PowerBanner activePower="steps" powerSecs={null} t={t} />
+      )}
     </div>
   );
 }
@@ -105,9 +126,15 @@ function PowerBanner({ activePower, powerSecs, t }) {
     ghost: { color: "#44aaff", glow: "rgba(68,170,255,0.4)" },
     fly: { color: "#ffcc00", glow: "rgba(255,204,0,0.4)" },
     trail: { color: "#44ee88", glow: "rgba(68,238,136,0.4)" },
+    steps: { color: "#ff44aa", glow: "rgba(255,68,170,0.4)" },
   };
   const { color, glow } = colors[activePower] || colors.ghost;
-  const labels = { ghost: t.powerGhost, fly: t.powerFly, trail: t.powerTrail };
+  const labels = {
+    ghost: t.powerGhost,
+    fly: t.powerFly,
+    trail: t.powerTrail,
+    steps: t.powerSteps,
+  };
   const label = labels[activePower] || "";
 
   return (

@@ -5,7 +5,12 @@ import HUD from "./HUD";
 import QuizModal from "./QuizModal";
 import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
-import { generateMaze, CELL_SIZE, placeMagicItems } from "../lib/maze";
+import {
+  generateMaze,
+  CELL_SIZE,
+  placeMagicItems,
+  placeStepsItem,
+} from "../lib/maze";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
 import { playMagicPickup, playTreasureWin } from "../lib/sounds";
@@ -123,6 +128,7 @@ export default function App() {
   const [powerEndTime, setPowerEndTime] = useState(0);
   const [trailActive, setTrailActive] = useState(false);
   const [skippedItem, setSkippedItem] = useState(-1);
+  const [stepsDepleted, setStepsDepleted] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -152,6 +158,7 @@ export default function App() {
     setActivePower(null);
     setPowerEndTime(0);
     setTrailActive(false);
+    setStepsDepleted(0);
   }, []);
 
   useEffect(() => {
@@ -199,13 +206,25 @@ export default function App() {
       !quizInfo
     ) {
       setQuizInfo({
-        onSuccess: () =>
-          setStepsRemaining((prev) => prev + Math.ceil(maxSteps * 0.4)),
+        onSuccess: () => {
+          setStepsRemaining((prev) => prev + Math.ceil(maxSteps * 0.4));
+          setStepsDepleted((prev) => {
+            const next = prev + 1;
+            // Every 2nd depletion, spawn a steps-refill item
+            if (next % 2 === 0) {
+              setMagicItems((items) => {
+                const newItem = placeStepsItem(game.cells, items);
+                return newItem ? [...items, newItem] : items;
+              });
+            }
+            return next;
+          });
+        },
         canCancel: false,
         prompt: t.quizStepsPrompt,
       });
     }
-  }, [stepsRemaining, maxSteps, screen, quizInfo, t]);
+  }, [stepsRemaining, maxSteps, screen, quizInfo, t, game.cells]);
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
@@ -223,6 +242,10 @@ export default function App() {
             setTrailActive(true);
             return prev.filter((it) => it.type !== "trail");
           }
+          if (item.type === "steps") {
+            setStepsRemaining(maxSteps);
+            return prev.filter((_, i) => i !== index);
+          }
           setActivePower(item.type);
           setPowerEndTime(Date.now() + 5000);
           return prev.filter((_, i) => i !== index);
@@ -235,7 +258,7 @@ export default function App() {
         onCancel: () => setSkippedItem(index),
       });
     },
-    [t],
+    [t, maxSteps],
   );
 
   const onPowerEnd = useCallback(() => {
@@ -254,6 +277,9 @@ export default function App() {
   const debugTrail = useCallback(() => {
     setTrailActive((prev) => !prev);
   }, []);
+  const debugStepsRefill = useCallback(() => {
+    setStepsRemaining(maxSteps);
+  }, [maxSteps]);
 
   const startGame = useCallback(() => {
     beginLevel(0, newGame(0));
@@ -437,6 +463,7 @@ export default function App() {
           onGhost={debugGhost}
           onFly={debugFly}
           onTrail={debugTrail}
+          onStepsRefill={debugStepsRefill}
         />
       </div>
     );

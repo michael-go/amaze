@@ -3,7 +3,14 @@ import { useEffect, useRef } from "react";
 
 const isDebug = () => window.location.hash.includes("debug");
 
-function DebugControls({ level, onJumpToLevel, onGhost, onFly, onTrail }) {
+function DebugControls({
+  level,
+  onJumpToLevel,
+  onGhost,
+  onFly,
+  onTrail,
+  onStepsRefill,
+}) {
   const externalUpdate = useRef(false);
 
   const { Level } = useControls(
@@ -12,6 +19,7 @@ function DebugControls({ level, onJumpToLevel, onGhost, onFly, onTrail }) {
       Ghost: button(() => onGhost?.()),
       Fly: button(() => onFly?.()),
       Trail: button(() => onTrail?.()),
+      "Steps Refill": button(() => onStepsRefill?.()),
     },
     [level],
   );
@@ -39,6 +47,7 @@ export default function DebugPanel({
   onGhost,
   onFly,
   onTrail,
+  onStepsRefill,
 }) {
   if (!isDebug()) return null;
   return (
@@ -48,6 +57,7 @@ export default function DebugPanel({
       onGhost={onGhost}
       onFly={onFly}
       onTrail={onTrail}
+      onStepsRefill={onStepsRefill}
     />
   );
 }

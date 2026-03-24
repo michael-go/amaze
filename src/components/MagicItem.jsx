@@ -1,11 +1,12 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { MAGIC_GHOST, MAGIC_TRAIL } from "../lib/maze";
+import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS } from "../lib/maze";
 
 const ITEM_COLORS = {
   ghost: { color: "#44aaff", emissive: "#2266ff" },
   fly: { color: "#ffcc00", emissive: "#ff8800" },
   trail: { color: "#44ee88", emissive: "#22aa55" },
+  steps: { color: "#ff44aa", emissive: "#cc2288" },
 };
 
 export default function MagicItem({ item }) {
@@ -32,6 +33,8 @@ export default function MagicItem({ item }) {
           <GhostCrystal color={color} emissive={emissive} />
         ) : item.type === MAGIC_TRAIL ? (
           <TrailCompass color={color} emissive={emissive} />
+        ) : item.type === MAGIC_STEPS ? (
+          <StepsHeart color={color} emissive={emissive} />
         ) : (
           <FlyWings color={color} emissive={emissive} />
         )}
@@ -160,6 +163,45 @@ function TrailCompass({ color, emissive }) {
           color={color}
           emissive={emissive}
           emissiveIntensity={0.5}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function StepsHeart({ color, emissive }) {
+  return (
+    <group>
+      {/* Two spheres forming a heart-like top */}
+      <mesh position={[-0.08, 0.04, 0]}>
+        <sphereGeometry args={[0.1, 12, 12]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={emissive}
+          emissiveIntensity={0.7}
+          metalness={0.3}
+          roughness={0.2}
+        />
+      </mesh>
+      <mesh position={[0.08, 0.04, 0]}>
+        <sphereGeometry args={[0.1, 12, 12]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={emissive}
+          emissiveIntensity={0.7}
+          metalness={0.3}
+          roughness={0.2}
+        />
+      </mesh>
+      {/* Bottom point */}
+      <mesh position={[0, -0.08, 0]} rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[0.12, 0.12, 0.12]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={emissive}
+          emissiveIntensity={0.7}
+          metalness={0.3}
+          roughness={0.2}
         />
       </mesh>
     </group>
