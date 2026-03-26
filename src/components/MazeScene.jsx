@@ -45,6 +45,7 @@ export default function MazeScene({
   onPowerEnd,
   trailActive,
   skippedItem,
+  playerInfoRef,
 }) {
   const theme = levelTheme(level);
   const { camera } = useThree();
@@ -114,6 +115,7 @@ export default function MazeScene({
 
   useFrame((_, delta) => {
     const pos = playerPos.current;
+    if (playerInfoRef) playerInfoRef.current = { pos, yaw: yaw.current };
     const isGhost = activePower === MAGIC_GHOST;
     const isFlying = activePower === MAGIC_FLY;
 

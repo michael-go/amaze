@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import MazeScene from "./MazeScene";
 import HUD from "./HUD";
@@ -130,6 +130,7 @@ export default function App() {
   const [powerEndTime, setPowerEndTime] = useState(0);
   const [trailActive, setTrailActive] = useState(false);
   const [skippedItem, setSkippedItem] = useState(-1);
+  const playerInfoRef = useRef(null);
   const [stepsDepleted, setStepsDepleted] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
@@ -273,20 +274,24 @@ export default function App() {
     setPowerEndTime(0);
   }, []);
 
-  const debugGhost = useCallback(() => {
-    setActivePower((prev) => (prev === "ghost" ? null : "ghost"));
-    setPowerEndTime(Date.now() + 5000);
+  const debugSpawnItem = useCallback((type) => {
+    const info = playerInfoRef.current;
+    if (!info) return;
+    const dx = -Math.sin(info.yaw);
+    const dz = -Math.cos(info.yaw);
+    const cx = Math.floor((info.pos.x + dx * CELL_SIZE) / CELL_SIZE);
+    const cz = Math.floor((info.pos.z + dz * CELL_SIZE) / CELL_SIZE);
+    setMagicItems((prev) => [
+      ...prev,
+      {
+        type,
+        cellX: cx,
+        cellY: cz,
+        worldX: cx * CELL_SIZE + CELL_SIZE / 2,
+        worldZ: cz * CELL_SIZE + CELL_SIZE / 2,
+      },
+    ]);
   }, []);
-  const debugFly = useCallback(() => {
-    setActivePower((prev) => (prev === "fly" ? null : "fly"));
-    setPowerEndTime(Date.now() + 5000);
-  }, []);
-  const debugTrail = useCallback(() => {
-    setTrailActive((prev) => !prev);
-  }, []);
-  const debugStepsRefill = useCallback(() => {
-    setStepsRemaining(maxSteps);
-  }, [maxSteps]);
 
   const startGame = useCallback(() => {
     beginLevel(0, newGame(0));
@@ -490,10 +495,7 @@ export default function App() {
         <DebugPanel
           level={level}
           onJumpToLevel={jumpToLevel}
-          onGhost={debugGhost}
-          onFly={debugFly}
-          onTrail={debugTrail}
-          onStepsRefill={debugStepsRefill}
+          onSpawnItem={debugSpawnItem}
         />
       </div>
     );
@@ -531,6 +533,7 @@ export default function App() {
           onPowerEnd={onPowerEnd}
           trailActive={trailActive}
           skippedItem={skippedItem}
+          playerInfoRef={playerInfoRef}
         />
       </Canvas>
 
@@ -654,9 +657,7 @@ export default function App() {
       <DebugPanel
         level={level}
         onJumpToLevel={jumpToLevel}
-        onGhost={debugGhost}
-        onFly={debugFly}
-        onTrail={debugTrail}
+        onSpawnItem={debugSpawnItem}
       />
     </div>
   );

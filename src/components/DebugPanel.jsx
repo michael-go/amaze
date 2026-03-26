@@ -3,23 +3,16 @@ import { useEffect, useRef } from "react";
 
 const isDebug = () => window.location.hash.includes("debug");
 
-function DebugControls({
-  level,
-  onJumpToLevel,
-  onGhost,
-  onFly,
-  onTrail,
-  onStepsRefill,
-}) {
+function DebugControls({ level, onJumpToLevel, onSpawnItem }) {
   const externalUpdate = useRef(false);
 
   const { Level } = useControls(
     {
       Level: { value: level + 1, min: 1, max: 100, step: 1 },
-      Ghost: button(() => onGhost?.()),
-      Fly: button(() => onFly?.()),
-      Trail: button(() => onTrail?.()),
-      "Steps Refill": button(() => onStepsRefill?.()),
+      Ghost: button(() => onSpawnItem?.("ghost")),
+      Fly: button(() => onSpawnItem?.("fly")),
+      Trail: button(() => onSpawnItem?.("trail")),
+      "Steps Refill": button(() => onSpawnItem?.("steps")),
     },
     [level],
   );
@@ -41,23 +34,13 @@ function DebugControls({
   return <Leva collapsed={false} />;
 }
 
-export default function DebugPanel({
-  level,
-  onJumpToLevel,
-  onGhost,
-  onFly,
-  onTrail,
-  onStepsRefill,
-}) {
+export default function DebugPanel({ level, onJumpToLevel, onSpawnItem }) {
   if (!isDebug()) return null;
   return (
     <DebugControls
       level={level}
       onJumpToLevel={onJumpToLevel}
-      onGhost={onGhost}
-      onFly={onFly}
-      onTrail={onTrail}
-      onStepsRefill={onStepsRefill}
+      onSpawnItem={onSpawnItem}
     />
   );
 }

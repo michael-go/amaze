@@ -52,9 +52,7 @@ export default function HUD({
       maxSteps > 0
     ) {
       setShowStepsFlash(true);
-      const id = setTimeout(() => setShowStepsFlash(false), 2000);
-      prevSteps.current = stepsRemaining;
-      return () => clearTimeout(id);
+      setTimeout(() => setShowStepsFlash(false), 2000);
     }
     prevSteps.current = stepsRemaining;
   }, [stepsRemaining, maxSteps, level]);
