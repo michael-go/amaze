@@ -37,11 +37,18 @@ export default function HUD({
   // Brief flash when steps are refilled by magic item
   const [showStepsFlash, setShowStepsFlash] = useState(false);
   const prevSteps = useRef(stepsRemaining);
+  const prevLevel = useRef(level);
   useEffect(() => {
+    // Skip flash on level change — steps reset is not a refill
+    if (prevLevel.current !== level) {
+      prevLevel.current = level;
+      prevSteps.current = stepsRemaining;
+      return;
+    }
     if (
       stepsRemaining === maxSteps &&
       prevSteps.current < maxSteps &&
-      prevSteps.current >= 0 &&
+      prevSteps.current > 0 &&
       maxSteps > 0
     ) {
       setShowStepsFlash(true);
@@ -50,7 +57,7 @@ export default function HUD({
       return () => clearTimeout(id);
     }
     prevSteps.current = stepsRemaining;
-  }, [stepsRemaining, maxSteps]);
+  }, [stepsRemaining, maxSteps, level]);
 
   // Brief flash when trail is activated
   const [showTrailFlash, setShowTrailFlash] = useState(false);
