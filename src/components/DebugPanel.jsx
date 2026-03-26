@@ -15,7 +15,7 @@ function DebugControls({
 
   const { Level } = useControls(
     {
-      Level: { value: level + 1, min: 1, max: 20, step: 1 },
+      Level: { value: level + 1, min: 1, max: 100, step: 1 },
       Ghost: button(() => onGhost?.()),
       Fly: button(() => onFly?.()),
       Trail: button(() => onTrail?.()),
