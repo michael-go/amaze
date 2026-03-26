@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS } from "../lib/maze";
 
 const ITEM_COLORS = {
@@ -170,40 +171,37 @@ function TrailCompass({ color, emissive }) {
 }
 
 function StepsHeart({ color, emissive }) {
+  const geometry = useMemo(() => {
+    const x = 0,
+      y = 0;
+    const s = new THREE.Shape();
+    s.moveTo(x, y - 0.14);
+    s.bezierCurveTo(x, y - 0.14, x - 0.05, y - 0.18, x - 0.12, y - 0.18);
+    s.bezierCurveTo(x - 0.22, y - 0.18, x - 0.22, y - 0.06, x - 0.22, y - 0.06);
+    s.bezierCurveTo(x - 0.22, y + 0.02, x - 0.14, y + 0.1, x, y + 0.18);
+    s.bezierCurveTo(x + 0.14, y + 0.1, x + 0.22, y + 0.02, x + 0.22, y - 0.06);
+    s.bezierCurveTo(x + 0.22, y - 0.06, x + 0.22, y - 0.18, x + 0.12, y - 0.18);
+    s.bezierCurveTo(x + 0.06, y - 0.18, x, y - 0.14, x, y - 0.14);
+    const geo = new THREE.ExtrudeGeometry(s, {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelThickness: 0.02,
+      bevelSize: 0.02,
+      bevelSegments: 3,
+    });
+    geo.center();
+    return geo;
+  }, []);
+
   return (
-    <group>
-      {/* Two spheres forming a heart-like top */}
-      <mesh position={[-0.08, 0.04, 0]}>
-        <sphereGeometry args={[0.1, 12, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={emissive}
-          emissiveIntensity={0.7}
-          metalness={0.3}
-          roughness={0.2}
-        />
-      </mesh>
-      <mesh position={[0.08, 0.04, 0]}>
-        <sphereGeometry args={[0.1, 12, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={emissive}
-          emissiveIntensity={0.7}
-          metalness={0.3}
-          roughness={0.2}
-        />
-      </mesh>
-      {/* Bottom point */}
-      <mesh position={[0, -0.08, 0]} rotation={[0, 0, Math.PI / 4]}>
-        <boxGeometry args={[0.12, 0.12, 0.12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={emissive}
-          emissiveIntensity={0.7}
-          metalness={0.3}
-          roughness={0.2}
-        />
-      </mesh>
-    </group>
+    <mesh geometry={geometry} rotation={[0, 0, Math.PI]}>
+      <meshStandardMaterial
+        color={color}
+        emissive={emissive}
+        emissiveIntensity={0.7}
+        metalness={0.3}
+        roughness={0.2}
+      />
+    </mesh>
   );
 }
