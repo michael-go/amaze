@@ -4,11 +4,15 @@ const strings = {
   he: {
     title: "AMAZE",
     subtitle: "הרפתקה במבוך",
-    instrMove: "קדימה",
-    instrTurn: "סיבוב",
-    instrUpDown: "אחורה",
+    instrArrows: "תנועה",
     instrToggle: "מעבר לתצוגה עילית",
-    instrExit: "מצאו את האוצר כדי להתקדם! העזרו בחפצים קסומים בדרך ✨",
+    instrExit: (
+      <>
+        מצאו את האוצר כדי להתקדם!
+        <br />
+        העזרו בחפצים קסומים בדרך ✨
+      </>
+    ),
     startGame: "התחילו את המשחק",
     nextLevel: "לשלב הבא",
     restart: "מההתחלה",
@@ -47,12 +51,15 @@ const strings = {
   en: {
     title: "AMAZE",
     subtitle: "A 3D Maze Adventure",
-    instrMove: "Move forward",
-    instrTurn: "Turn",
-    instrUpDown: "Move backward",
+    instrArrows: "Movement",
     instrToggle: "Toggle top view",
-    instrExit:
-      "Find the treasure to advance! Collect magic items along the way ✨",
+    instrExit: (
+      <>
+        Find the treasure to advance!
+        <br />
+        Collect magic items along the way ✨
+      </>
+    ),
     startGame: "START GAME",
     nextLevel: "NEXT LEVEL",
     restart: "RESTART",

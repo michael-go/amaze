@@ -369,22 +369,44 @@ export default function App() {
             {t.subtitle}
           </p>
           <div
-            style={{ ...styles.instructions, fontFamily: font, fontSize: 16 }}
+            style={{
+              ...styles.instructions,
+              fontFamily: font,
+              fontSize: 16,
+              direction: "ltr",
+            }}
           >
-            <div style={styles.instrRow}>
-              <Key>↑</Key> <span style={styles.instrDash}>—</span> {t.instrMove}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Key>↑</Key>
+              <div style={{ display: "flex", gap: 3 }}>
+                <Key>←</Key>
+                <Key>↓</Key>
+                <Key>→</Key>
+              </div>
+              <span style={{ color: "#999", fontSize: 13, marginTop: 2 }}>
+                {t.instrArrows}
+              </span>
             </div>
-            <div style={styles.instrRow}>
-              <Key>←</Key> <Key>→</Key> <span style={styles.instrDash}>—</span>{" "}
-              {t.instrTurn}
-            </div>
-            <div style={styles.instrRow}>
-              <Key>↓</Key> <span style={styles.instrDash}>—</span>{" "}
-              {t.instrUpDown}
-            </div>
-            <div style={styles.instrRow}>
-              <Key>T</Key> <span style={styles.instrDash}>—</span>{" "}
-              {t.instrToggle}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                marginTop: 14,
+              }}
+            >
+              <Key>T</Key>
+              <span style={{ color: "#999", fontSize: 13, marginTop: 2 }}>
+                {t.instrToggle}
+              </span>
             </div>
           </div>
           <p
@@ -738,17 +760,9 @@ const styles = {
     background: "#0a0a0a",
     padding: "20px 28px",
     borderRadius: 4,
-  },
-  instrRow: {
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-    justifyContent: "center",
-  },
-  instrDash: {
-    color: "#555",
-    margin: "0 2px",
   },
   keyCap: {
     display: "inline-flex",
