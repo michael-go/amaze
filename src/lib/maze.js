@@ -9,6 +9,12 @@ export const MAGIC_STEPS = "steps"; // refill steps bar
 export const CELL_SIZE = 4;
 export const WALL_HEIGHT = 3;
 
+// Module-level RNG — set before generation to control randomness
+let _rng = Math.random;
+export function setRng(fn) {
+  _rng = fn;
+}
+
 // ---------------------------------------------------------------------------
 // Shape mask generation
 // ---------------------------------------------------------------------------
@@ -81,7 +87,7 @@ export function generateShapeMask(width, height, shape) {
   };
 
   let mask;
-  const rotation = Math.floor(Math.random() * 4);
+  const rotation = Math.floor(_rng() * 4);
 
   switch (shape) {
     case "L": {
@@ -176,7 +182,7 @@ function initCells(width, height) {
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(_rng() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
@@ -220,7 +226,7 @@ function randomValidCell(width, height, mask) {
   const valid = [];
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) if (mask[y][x]) valid.push({ x, y });
-  return valid[Math.floor(Math.random() * valid.length)];
+  return valid[Math.floor(_rng() * valid.length)];
 }
 
 function carveBacktrack(cells, width, height, mask) {
@@ -263,7 +269,7 @@ function carvePrims(cells, width, height, mask) {
   addFrontier(start.x, start.y);
 
   while (frontier.length > 0) {
-    const idx = Math.floor(Math.random() * frontier.length);
+    const idx = Math.floor(_rng() * frontier.length);
     const wall = frontier[idx];
     // Swap-remove for performance
     frontier[idx] = frontier[frontier.length - 1];
@@ -635,9 +641,7 @@ export function getMazeWalls(cells) {
 export function placeMagicItems(cells, count, mask, startCell, exitCell) {
   const height = cells.length;
   const width = cells[0].length;
-  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL].sort(
-    () => Math.random() - 0.5,
-  );
+  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL].sort(() => _rng() - 0.5);
   const items = [];
   const used = new Set();
   if (startCell) used.add(`${startCell.x},${startCell.y}`);
@@ -646,8 +650,8 @@ export function placeMagicItems(cells, count, mask, startCell, exitCell) {
   for (let i = 0; i < count; i++) {
     let attempts = 0;
     while (attempts < 100) {
-      const x = Math.floor(Math.random() * width);
-      const y = Math.floor(Math.random() * height);
+      const x = Math.floor(_rng() * width);
+      const y = Math.floor(_rng() * height);
       if (mask && !mask[y][x]) {
         attempts++;
         continue;
@@ -689,8 +693,8 @@ export function placeSingleItem(
   for (const it of existingItems) used.add(`${it.cellX},${it.cellY}`);
 
   for (let attempts = 0; attempts < 100; attempts++) {
-    const x = Math.floor(Math.random() * width);
-    const y = Math.floor(Math.random() * height);
+    const x = Math.floor(_rng() * width);
+    const y = Math.floor(_rng() * height);
     if (mask && !mask[y][x]) continue;
     const key = `${x},${y}`;
     const tooClose = existingItems.some(

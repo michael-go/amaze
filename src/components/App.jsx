@@ -10,6 +10,7 @@ import {
   generateShapeMask,
   addLoops,
   chooseStartExit,
+  setRng,
   CELL_SIZE,
   placeMagicItems,
   placeSingleItem,
@@ -17,12 +18,17 @@ import {
   MAGIC_TRAIL,
 } from "../lib/maze";
 import { getLevelConfig } from "../lib/levelConfig";
+import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
 import { playMagicPickup, playTreasureWin } from "../lib/sounds";
 
-function newGame(level) {
-  const config = getLevelConfig(level);
+function newGame(level, mazeSeed, itemsSeed) {
+  // Maze structure RNG
+  const mazeRng = createRng(mazeSeed);
+  setRng(mazeRng);
+
+  const config = getLevelConfig(level, mazeRng);
   const mask = generateShapeMask(config.width, config.height, config.shape);
   const cells = generateMaze(config.width, config.height, {
     algorithm: config.algorithm,
@@ -35,6 +41,10 @@ function newGame(level) {
     config.width,
     config.height,
   );
+
+  // Items placement RNG
+  setRng(createRng(itemsSeed));
+
   return {
     cells,
     mask,
@@ -122,10 +132,22 @@ function Key({ children }) {
   return <span style={styles.keyCap}>{children}</span>;
 }
 
+// Default seeds: deterministic per level so same level = same maze on refresh
+function defaultMazeSeed(level) {
+  return level * 7919 + 42;
+}
+function defaultItemsSeed(level) {
+  return level * 6271 + 137;
+}
+
 export default function App() {
   const { t, toggle: toggleLang } = useI18n();
   const [level, setLevel] = useState(0);
-  const [game, setGame] = useState(() => newGame(0));
+  const [mazeSeed, setMazeSeed] = useState(() => defaultMazeSeed(0));
+  const [itemsSeed, setItemsSeed] = useState(() => defaultItemsSeed(0));
+  const [game, setGame] = useState(() =>
+    newGame(0, defaultMazeSeed(0), defaultItemsSeed(0)),
+  );
   const [topView, setTopView] = useState(false);
   const [won, setWon] = useState(false);
   const [screen, setScreen] = useState("title"); // 'title' | 'countdown' | 'playing' | 'won'
@@ -187,7 +209,20 @@ export default function App() {
     setPowerEndTime(0);
     setTrailActive(false);
     setStepsDepleted(0);
+    // Reset to Math.random for runtime spawns (step depletion bonus items)
+    setRng(Math.random);
   }, []);
+
+  const startLevel = useCallback(
+    (lvl, mSeed, iSeed) => {
+      const ms = mSeed ?? defaultMazeSeed(lvl);
+      const is_ = iSeed ?? defaultItemsSeed(lvl);
+      setMazeSeed(ms);
+      setItemsSeed(is_);
+      beginLevel(lvl, newGame(lvl, ms, is_));
+    },
+    [beginLevel],
+  );
 
   useEffect(() => {
     const onKey = (e) => {
@@ -202,7 +237,7 @@ export default function App() {
       }
       if (e.code === "Space" && screen === "title") {
         const lvl = savedLevel > 0 ? savedLevel : 0;
-        beginLevel(lvl, newGame(lvl));
+        startLevel(lvl);
       }
       if (e.code === "Space" && screen === "countdown") {
         setTopView(false);
@@ -211,7 +246,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [screen, topView, quizInfo, beginLevel, t]);
+  }, [screen, topView, quizInfo, startLevel, t]);
 
   // Countdown timer
   useEffect(() => {
@@ -326,13 +361,12 @@ export default function App() {
   }, []);
 
   const startGame = useCallback(() => {
-    beginLevel(0, newGame(0));
-  }, [beginLevel]);
+    startLevel(0);
+  }, [startLevel]);
 
   const nextLevel = useCallback(() => {
-    const next = level + 1;
-    beginLevel(next, newGame(next));
-  }, [level, beginLevel]);
+    startLevel(level + 1);
+  }, [level, startLevel]);
 
   const handleWin = useCallback(() => {
     playTreasureWin();
@@ -343,9 +377,9 @@ export default function App() {
 
   const jumpToLevel = useCallback(
     (lvl) => {
-      beginLevel(lvl, newGame(lvl));
+      startLevel(lvl);
     },
-    [beginLevel],
+    [startLevel],
   );
 
   const langButton = (
@@ -467,7 +501,7 @@ export default function App() {
             >
               <button
                 style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
-                onClick={() => beginLevel(savedLevel, newGame(savedLevel))}
+                onClick={() => startLevel(savedLevel)}
               >
                 {t.continueFrom(savedLevel + 1)}
               </button>
@@ -528,6 +562,9 @@ export default function App() {
           level={level}
           onJumpToLevel={jumpToLevel}
           onSpawnItem={debugSpawnItem}
+          mazeSeed={mazeSeed}
+          itemsSeed={itemsSeed}
+          onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
         />
       </div>
     );
@@ -690,6 +727,9 @@ export default function App() {
         level={level}
         onJumpToLevel={jumpToLevel}
         onSpawnItem={debugSpawnItem}
+        mazeSeed={mazeSeed}
+        itemsSeed={itemsSeed}
+        onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
       />
     </div>
   );

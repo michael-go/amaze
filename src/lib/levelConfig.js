@@ -4,22 +4,24 @@ const SHAPES_MID = ["square", "L", "T"];
 const SHAPES_HIGH = ["square", "L", "T", "U"];
 const SHAPES_ALL = ["L", "T", "U", "diamond", "donut"];
 
-export function getLevelConfig(level) {
+export function getLevelConfig(level, rng) {
+  const rand = rng || Math.random;
+
   // Size: grows from 6 to 25 (caps)
   const size = Math.min(25, 6 + Math.floor(level * 1.5));
 
   // Algorithm: backtracking for early levels, mix later
   const algorithm =
-    level < 4 ? "backtrack" : Math.random() < 0.5 ? "backtrack" : "prims";
+    level < 4 ? "backtrack" : rand() < 0.5 ? "backtrack" : "prims";
 
   // Shape: square early, introduce shapes gradually
   let shape = "square";
   if (level >= 8) {
-    shape = SHAPES_ALL[Math.floor(Math.random() * SHAPES_ALL.length)];
+    shape = SHAPES_ALL[Math.floor(rand() * SHAPES_ALL.length)];
   } else if (level >= 6) {
-    shape = SHAPES_HIGH[Math.floor(Math.random() * SHAPES_HIGH.length)];
+    shape = SHAPES_HIGH[Math.floor(rand() * SHAPES_HIGH.length)];
   } else if (level >= 5) {
-    shape = SHAPES_MID[Math.floor(Math.random() * SHAPES_MID.length)];
+    shape = SHAPES_MID[Math.floor(rand() * SHAPES_MID.length)];
   }
 
   // Loops: peak mid-game then decrease (fewer loops = harder, more dead ends)
