@@ -1,18 +1,64 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CELL_SIZE, WALL_HEIGHT } from "../lib/maze";
 import { createWallTexture } from "../lib/wallTexture";
 
 export function MazeFloor({ game, theme }) {
-  const w = game.width * CELL_SIZE;
-  const h = game.height * CELL_SIZE;
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
-      <planeGeometry args={[w, h]} />
-      <meshStandardMaterial color={theme.floor} roughness={0.9} />
-    </mesh>
+  if (!game.mask) {
+    const w = game.width * CELL_SIZE;
+    const h = game.height * CELL_SIZE;
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial color={theme.floor} roughness={0.9} />
+      </mesh>
+    );
+  }
+  return <ShapedFloor game={game} theme={theme} />;
+}
+
+function ShapedFloor({ game, theme }) {
+  const { mask } = game;
+  const geo = useMemo(() => new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE), []);
+  const mat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({ color: theme.floor, roughness: 0.9 }),
+    [theme.floor],
   );
+
+  const tiles = useMemo(() => {
+    const t = [];
+    for (let y = 0; y < game.height; y++)
+      for (let x = 0; x < game.width; x++)
+        if (mask[y][x])
+          t.push({
+            x: x * CELL_SIZE + CELL_SIZE / 2,
+            z: y * CELL_SIZE + CELL_SIZE / 2,
+          });
+    return t;
+  }, [mask, game.width, game.height]);
+
+  const meshRef = useRef();
+
+  // Set instance matrices whenever the ref or tiles change
+  const setRef = useCallback(
+    (node) => {
+      meshRef.current = node;
+      if (!node) return;
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < tiles.length; i++) {
+        dummy.position.set(tiles[i].x, 0, tiles[i].z);
+        dummy.rotation.set(-Math.PI / 2, 0, 0);
+        dummy.updateMatrix();
+        node.setMatrixAt(i, dummy.matrix);
+      }
+      node.instanceMatrix.needsUpdate = true;
+    },
+    [tiles],
+  );
+
+  return <instancedMesh ref={setRef} args={[geo, mat, tiles.length]} />;
 }
 
 export function PlayerLight({ playerPos }) {

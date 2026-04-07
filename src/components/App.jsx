@@ -7,37 +7,52 @@ import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
 import {
   generateMaze,
+  generateShapeMask,
+  addLoops,
+  chooseStartExit,
   CELL_SIZE,
   placeMagicItems,
   placeSingleItem,
   MAGIC_STEPS,
   MAGIC_TRAIL,
 } from "../lib/maze";
+import { getLevelConfig } from "../lib/levelConfig";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
 import { playMagicPickup, playTreasureWin } from "../lib/sounds";
 
-const MAZE_SIZES = [
-  { w: 6, h: 6 },
-  { w: 8, h: 8 },
-  { w: 10, h: 10 },
-  { w: 12, h: 12 },
-  { w: 15, h: 15 },
-];
-
 function newGame(level) {
-  const size = MAZE_SIZES[Math.min(level, MAZE_SIZES.length - 1)];
-  const cells = generateMaze(size.w, size.h);
+  const config = getLevelConfig(level);
+  const mask = generateShapeMask(config.width, config.height, config.shape);
+  const cells = generateMaze(config.width, config.height, {
+    algorithm: config.algorithm,
+    mask,
+  });
+  addLoops(cells, config.loopFactor, mask);
+  const { start, exit, startYaw } = chooseStartExit(
+    cells,
+    mask,
+    config.width,
+    config.height,
+  );
   return {
     cells,
-    width: size.w,
-    height: size.h,
-    startPos: [CELL_SIZE / 2, 0, CELL_SIZE / 2],
-    exitPos: [
-      (size.w - 1) * CELL_SIZE + CELL_SIZE / 2,
+    mask,
+    width: config.width,
+    height: config.height,
+    startPos: [
+      start.x * CELL_SIZE + CELL_SIZE / 2,
       0,
-      (size.h - 1) * CELL_SIZE + CELL_SIZE / 2,
+      start.y * CELL_SIZE + CELL_SIZE / 2,
     ],
+    exitPos: [
+      exit.x * CELL_SIZE + CELL_SIZE / 2,
+      0,
+      exit.y * CELL_SIZE + CELL_SIZE / 2,
+    ],
+    startYaw,
+    startCell: start,
+    exitCell: exit,
   };
 }
 
@@ -151,13 +166,23 @@ export default function App() {
     setTopView(true);
     setCountdown(10);
     setScreen("countdown");
-    // Steps proportional to maze area — enough to walk ~45% of cells
-    const ms = Math.ceil(g.width * g.height * CELL_SIZE * 0.45);
+    // Steps proportional to valid cell count, scaled by level config
+    const config = getLevelConfig(lvl);
+    const validCells = g.mask
+      ? g.mask.flat().filter(Boolean).length
+      : g.width * g.height;
+    const ms = Math.ceil(validCells * CELL_SIZE * config.stepBudgetRatio);
     setMaxSteps(ms);
     setStepsRemaining(ms);
-    // Place magic items — more items on bigger mazes
-    const itemCount = Math.min(2 + Math.floor(lvl / 2), 6);
-    setMagicItems(placeMagicItems(g.cells, itemCount));
+    setMagicItems(
+      placeMagicItems(
+        g.cells,
+        config.magicItemCount,
+        g.mask,
+        g.startCell,
+        g.exitCell,
+      ),
+    );
     setActivePower(null);
     setPowerEndTime(0);
     setTrailActive(false);
@@ -221,7 +246,14 @@ export default function App() {
                   trailActive || items.some((it) => it.type === "trail");
                 const type =
                   !hasTrail && Math.random() < 0.5 ? MAGIC_TRAIL : MAGIC_STEPS;
-                const newItem = placeSingleItem(game.cells, items, type);
+                const newItem = placeSingleItem(
+                  game.cells,
+                  items,
+                  type,
+                  game.mask,
+                  game.startCell,
+                  game.exitCell,
+                );
                 return newItem ? [...items, newItem] : items;
               });
             }

@@ -52,7 +52,7 @@ export default function MazeScene({
   const keys = useKeyboardControls();
 
   const playerPos = useRef(new THREE.Vector3(...game.startPos));
-  const yaw = useRef(Math.PI);
+  const yaw = useRef(game.startYaw ?? Math.PI);
   const isMoving = useRef(false);
   const distAccum = useRef(0);
   const powerTimer = useRef(0);
@@ -60,7 +60,10 @@ export default function MazeScene({
   const playerY = useRef(0);
   const skipCleared = useRef(false);
 
-  const wallBoxes = useMemo(() => getWallBoxes(game.cells), [game.cells]);
+  const wallBoxes = useMemo(
+    () => getWallBoxes(game.cells, game.mask),
+    [game.cells, game.mask],
+  );
   const wallBoxesRef = useRef(wallBoxes);
   wallBoxesRef.current = wallBoxes;
 
@@ -89,7 +92,7 @@ export default function MazeScene({
 
   useEffect(() => {
     playerPos.current.set(...game.startPos);
-    yaw.current = Math.PI;
+    yaw.current = game.startYaw ?? Math.PI;
     distAccum.current = 0;
     powerTimer.current = 0;
     flyLanding.current = false;
@@ -152,7 +155,7 @@ export default function MazeScene({
       if (powerTimer.current >= duration) {
         powerTimer.current = 0;
         // Snap to nearest corridor so player doesn't end up stuck inside a wall
-        const landing = nearestCorridor(pos.x, pos.z, game.cells);
+        const landing = nearestCorridor(pos.x, pos.z, game.cells, game.mask);
         pos.x = landing.x;
         pos.z = landing.z;
         if (isFlying) {
