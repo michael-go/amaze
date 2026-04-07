@@ -5,17 +5,17 @@ import { CELL_SIZE, WALL_HEIGHT } from "../lib/maze";
 import { createWallTexture } from "../lib/wallTexture";
 
 export function MazeFloor({ game, theme }) {
-  if (!game.mask) {
-    const w = game.width * CELL_SIZE;
-    const h = game.height * CELL_SIZE;
-    return (
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
-        <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color={theme.floor} roughness={0.9} />
-      </mesh>
-    );
+  if (game.mask) {
+    return <ShapedFloor game={game} theme={theme} />;
   }
-  return <ShapedFloor game={game} theme={theme} />;
+  const w = game.width * CELL_SIZE;
+  const h = game.height * CELL_SIZE;
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial color={theme.floor} roughness={0.9} />
+    </mesh>
+  );
 }
 
 function ShapedFloor({ game, theme }) {

@@ -101,7 +101,16 @@ export default function MazeScene({
     lastCell.current = "";
   }, [game]);
 
+  function isVoid(nx, nz) {
+    if (!game.mask) return false;
+    const cx = Math.floor(nx / CELL_SIZE);
+    const cz = Math.floor(nz / CELL_SIZE);
+    if (cx < 0 || cx >= game.width || cz < 0 || cz >= game.height) return true;
+    return !game.mask[cz][cx];
+  }
+
   function collidesWithWall(nx, nz) {
+    if (isVoid(nx, nz)) return true;
     for (const box of wallBoxesRef.current) {
       const hw = box.width / 2 + PLAYER_RADIUS;
       const hd = box.depth / 2 + PLAYER_RADIUS;
