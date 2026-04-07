@@ -33,7 +33,9 @@ export function PlayerLight({ playerPos }) {
   );
 }
 
-export function MazeWalls({ wallBoxes, theme }) {
+const REVEAL_RADIUS = CELL_SIZE;
+
+export function MazeWalls({ wallBoxes, theme, playerPos, topView }) {
   const tex = useMemo(() => createWallTexture(theme), [theme]);
   const matH = useMemo(
     () =>
@@ -58,9 +60,75 @@ export function MazeWalls({ wallBoxes, theme }) {
       }),
     [tex, theme],
   );
+  const matHT = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: tex,
+        roughness: theme.rough,
+        metalness: theme.metal,
+        emissive: new THREE.Color(theme.emissive),
+        transparent: true,
+        opacity: 0.4,
+        depthWrite: false,
+      }),
+    [tex, theme],
+  );
+  const matVT = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: tex,
+        roughness: theme.rough,
+        metalness: theme.metal,
+        emissive: new THREE.Color(theme.emissive),
+        polygonOffset: true,
+        polygonOffsetFactor: 2,
+        polygonOffsetUnit: 2,
+        transparent: true,
+        opacity: 0.4,
+        depthWrite: false,
+      }),
+    [tex, theme],
+  );
+
+  const groupRef = useRef();
+  const wasTopView = useRef(false);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const children = groupRef.current.children;
+    if (!topView) {
+      if (wasTopView.current) {
+        for (let i = 0; i < children.length; i++) {
+          const mesh = children[i];
+          mesh.material = wallBoxes[i].axis === "h" ? matH : matV;
+          mesh.renderOrder = 0;
+        }
+        wasTopView.current = false;
+      }
+      return;
+    }
+    wasTopView.current = true;
+    if (!playerPos) return;
+    const p = playerPos.current;
+    for (let i = 0; i < children.length; i++) {
+      const mesh = children[i];
+      const box = wallBoxes[i];
+      const dx = p.x - box.cx;
+      const dz = p.z - box.cz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const isH = box.axis === "h";
+      if (dist < REVEAL_RADIUS) {
+        mesh.material = isH ? matHT : matVT;
+        mesh.renderOrder = 1;
+      } else {
+        mesh.material = isH ? matH : matV;
+        mesh.renderOrder = 0;
+      }
+    }
+  });
 
   return (
-    <>
+    <group ref={groupRef}>
       {wallBoxes.map((box, i) => (
         <mesh
           key={i}
@@ -70,7 +138,7 @@ export function MazeWalls({ wallBoxes, theme }) {
           <boxGeometry args={[box.width, WALL_HEIGHT, box.depth]} />
         </mesh>
       ))}
-    </>
+    </group>
   );
 }
 

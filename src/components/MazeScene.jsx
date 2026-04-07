@@ -343,7 +343,12 @@ export default function MazeScene({
       <Stars radius={100} depth={50} count={3000} factor={4} fade speed={1} />
 
       <MazeFloor game={game} theme={theme} />
-      <MazeWalls wallBoxes={wallBoxes} theme={theme} />
+      <MazeWalls
+        wallBoxes={wallBoxes}
+        theme={theme}
+        playerPos={playerPos}
+        topView={topView}
+      />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       {magicItems &&
