@@ -11,48 +11,59 @@ function DebugControls({
   itemsSeed,
   onSeedsChange,
 }) {
-  const externalUpdate = useRef(false);
+  // Track which values we know about to distinguish external updates from user edits
+  const knownRef = useRef({
+    level: level + 1,
+    mazeSeed: mazeSeed ?? 0,
+    itemsSeed: itemsSeed ?? 0,
+  });
+  const suppressUntil = useRef(0);
 
-  const values = useControls(
-    {
+  const [values, set] = useControls(
+    () => ({
       Level: { value: level + 1, min: 1, max: 100, step: 1 },
-      "Maze Seed": { value: mazeSeed, min: 0, max: 99999, step: 1 },
-      "Items Seed": { value: itemsSeed, min: 0, max: 99999, step: 1 },
+      "Maze Seed": { value: mazeSeed ?? 0, min: 0, max: 99999, step: 1 },
+      "Items Seed": { value: itemsSeed ?? 0, min: 0, max: 99999, step: 1 },
       Ghost: button(() => onSpawnItem?.("ghost")),
       Fly: button(() => onSpawnItem?.("fly")),
       Trail: button(() => onSpawnItem?.("trail")),
       "Steps Refill": button(() => onSpawnItem?.("steps")),
-    },
-    [level, mazeSeed, itemsSeed],
+    }),
+    [onSpawnItem],
   );
 
+  // Sync external state changes INTO leva (without triggering callbacks)
   useEffect(() => {
-    externalUpdate.current = true;
-  }, [level, mazeSeed, itemsSeed]);
+    suppressUntil.current = Date.now() + 100;
+    knownRef.current = {
+      level: level + 1,
+      mazeSeed: mazeSeed ?? 0,
+      itemsSeed: itemsSeed ?? 0,
+    };
+    set({
+      Level: level + 1,
+      "Maze Seed": mazeSeed ?? 0,
+      "Items Seed": itemsSeed ?? 0,
+    });
+  }, [level, mazeSeed, itemsSeed, set]);
 
+  // React to user edits in leva → call external callbacks
   useEffect(() => {
-    if (externalUpdate.current) {
-      externalUpdate.current = false;
-      return;
-    }
-    if (values.Level !== level + 1) {
+    if (Date.now() < suppressUntil.current) return;
+    const known = knownRef.current;
+
+    if (values.Level !== known.level) {
+      knownRef.current.level = values.Level;
       onJumpToLevel(values.Level - 1);
     } else if (
-      values["Maze Seed"] !== mazeSeed ||
-      values["Items Seed"] !== itemsSeed
+      values["Maze Seed"] !== known.mazeSeed ||
+      values["Items Seed"] !== known.itemsSeed
     ) {
+      knownRef.current.mazeSeed = values["Maze Seed"];
+      knownRef.current.itemsSeed = values["Items Seed"];
       onSeedsChange?.(values["Maze Seed"], values["Items Seed"]);
     }
-  }, [
-    values.Level,
-    values["Maze Seed"],
-    values["Items Seed"],
-    level,
-    mazeSeed,
-    itemsSeed,
-    onJumpToLevel,
-    onSeedsChange,
-  ]);
+  }, [values.Level, values["Maze Seed"], values["Items Seed"]]);
 
   return <Leva collapsed={false} />;
 }
