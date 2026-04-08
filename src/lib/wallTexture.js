@@ -39,15 +39,15 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.7,
     emissive: "#000010",
-    floor: "#22223a",
+    floor: "#2e2e48",
     pattern: "metal",
   }, // 4: metal fortress
   {
     wall: "#5a3a7a",
     rough: 0.5,
     metal: 0.4,
-    emissive: "#0a001a",
-    floor: "#4a3a5a",
+    emissive: "#1a0a30",
+    floor: "#5a4a6e",
     pattern: "crystal",
   }, // 5: arcane crystal
   {
@@ -55,7 +55,7 @@ export const LEVEL_THEMES = [
     rough: 0.3,
     metal: 0.3,
     emissive: "#001418",
-    floor: "#1a2a30",
+    floor: "#263a42",
     pattern: "ice",
   }, // 6: ice cave
   {
@@ -63,14 +63,46 @@ export const LEVEL_THEMES = [
     rough: 0.9,
     metal: 0.0,
     emissive: "#100800",
-    floor: "#2a2510",
+    floor: "#3a3520",
     pattern: "brick",
   }, // 7: ancient ruins
 ];
 
+// Ensure floor and wall colors are bright enough and have sufficient contrast
+function enforceContrast(theme) {
+  const MIN_FLOOR_L = 0.14;
+  const MIN_WALL_L = 0.2;
+  const MIN_CONTRAST = 0.08; // minimum lightness difference between wall and floor
+
+  const floorC = new THREE.Color(theme.floor);
+  const wallC = new THREE.Color(theme.wall);
+  const floorHSL = {};
+  const wallHSL = {};
+  floorC.getHSL(floorHSL);
+  wallC.getHSL(wallHSL);
+
+  // Enforce minimum lightness
+  floorHSL.l = Math.max(MIN_FLOOR_L, floorHSL.l);
+  wallHSL.l = Math.max(MIN_WALL_L, wallHSL.l);
+
+  // Enforce minimum contrast: wall should be noticeably lighter than floor
+  if (wallHSL.l - floorHSL.l < MIN_CONTRAST) {
+    wallHSL.l = floorHSL.l + MIN_CONTRAST;
+  }
+
+  floorC.setHSL(floorHSL.h, floorHSL.s, floorHSL.l);
+  wallC.setHSL(wallHSL.h, wallHSL.s, wallHSL.l);
+
+  return {
+    ...theme,
+    floor: "#" + floorC.getHexString(),
+    wall: "#" + wallC.getHexString(),
+  };
+}
+
 export function levelTheme(level) {
   const base = LEVEL_THEMES[level % LEVEL_THEMES.length];
-  if (level < LEVEL_THEMES.length) return base;
+  if (level < LEVEL_THEMES.length) return enforceContrast(base);
 
   // For higher levels, shift the base theme's colors to create unique variations
   const cycle = Math.floor(level / LEVEL_THEMES.length);
@@ -87,7 +119,7 @@ export function levelTheme(level) {
     return "#" + c.getHexString();
   };
 
-  return {
+  return enforceContrast({
     ...base,
     wall: shiftColor(base.wall),
     floor: shiftColor(base.floor),
@@ -97,7 +129,7 @@ export function levelTheme(level) {
       1,
       Math.max(0, base.metal + ((cycle * 3) % 4) * 0.1 - 0.15),
     ),
-  };
+  });
 }
 
 // Seeded pseudo-random so textures are stable across renders
