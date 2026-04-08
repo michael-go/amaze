@@ -7,8 +7,8 @@ const SHAPES_ALL = ["L", "T", "U", "diamond", "donut"];
 export function getLevelConfig(level, rng) {
   const rand = rng || Math.random;
 
-  // Size: grows from 6 to 25 (caps)
-  const size = Math.min(25, 6 + Math.floor(level * 1.5));
+  // Size: grows from 6 to 25 (caps) — matches original 6,8,10,12,15 ramp then continues
+  const size = Math.min(25, 6 + Math.floor(level * 2));
 
   // Algorithm: backtracking for early levels, mix later
   const algorithm =
