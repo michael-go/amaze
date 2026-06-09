@@ -133,6 +133,14 @@ function Key({ children }) {
   return <span style={styles.keyCap}>{children}</span>;
 }
 
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+const MEDAL_EMOJI = { gold: "🥇", silver: "🥈", bronze: "🥉" };
+
 // Default seeds: deterministic per level so same level = same maze on refresh
 function defaultMazeSeed(level) {
   return level * 7919 + 42;
@@ -175,6 +183,15 @@ export default function App() {
   const burstId = useRef(0);
   const winTimer = useRef(null);
   useEffect(() => () => clearTimeout(winTimer.current), []);
+  const levelStartRef = useRef(null);
+  const [winStats, setWinStats] = useState(null);
+
+  // Level timer starts when gameplay actually begins (after the countdown)
+  useEffect(() => {
+    if (screen === "playing" && levelStartRef.current === null) {
+      levelStartRef.current = Date.now();
+    }
+  }, [screen]);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -217,6 +234,8 @@ export default function App() {
     setTrailActive(false);
     setSkippedItem(null);
     setStepsDepleted(0);
+    levelStartRef.current = null;
+    setWinStats(null);
     // Reset to Math.random for runtime spawns (step depletion bonus items)
     setRng(Math.random);
   }, []);
@@ -391,13 +410,37 @@ export default function App() {
       z: game.exitPos[2],
       color: "#ffd700",
     });
+    if (levelStartRef.current !== null) {
+      const elapsed = (Date.now() - levelStartRef.current) / 1000;
+      // Par: time to walk the full step budget at run speed, plus slack
+      // for turning. Medals reward beating it by a margin.
+      const par = maxSteps / 5;
+      const medal =
+        elapsed <= par * 0.6 + 5
+          ? "gold"
+          : elapsed <= par + 8
+            ? "silver"
+            : elapsed <= par * 1.5 + 12
+              ? "bronze"
+              : null;
+      const bestKey = `amaze:best:${level}`;
+      const prevBest = parseFloat(localStorage.getItem(bestKey));
+      const newBest = !(prevBest > 0) || elapsed < prevBest;
+      if (newBest) localStorage.setItem(bestKey, elapsed.toFixed(1));
+      setWinStats({
+        time: elapsed,
+        medal,
+        best: newBest ? elapsed : prevBest,
+        newBest,
+      });
+    }
     setWon(true);
     // Let the victory dance and burst play out before covering the screen
     winTimer.current = setTimeout(() => {
       setScreen("won");
       setTopView(true);
     }, 2200);
-  }, [game]);
+  }, [game, maxSteps, level]);
 
   const jumpToLevel = useCallback(
     (lvl) => {
@@ -715,6 +758,30 @@ export default function App() {
             <p style={{ ...styles.subtitle, fontFamily: font, fontSize: 18 }}>
               {t.youFoundExit}
             </p>
+            {winStats && (
+              <div style={{ marginTop: 8 }}>
+                <div
+                  style={{
+                    color: "#fff",
+                    fontSize: 30,
+                    letterSpacing: 2,
+                    direction: "ltr",
+                  }}
+                >
+                  ⏱ {fmtTime(winStats.time)}
+                  {winStats.medal && ` ${MEDAL_EMOJI[winStats.medal]}`}
+                </div>
+                {winStats.newBest ? (
+                  <div style={{ color: "#ffd700", fontSize: 17, marginTop: 6 }}>
+                    {t.newRecord}
+                  </div>
+                ) : (
+                  <div style={{ color: "#888", fontSize: 15, marginTop: 6 }}>
+                    {t.bestTime}: {fmtTime(winStats.best)}
+                  </div>
+                )}
+              </div>
+            )}
             <div
               style={{
                 display: "flex",
