@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { generateQuestion } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
+import { playQuizCorrect, playQuizWrong } from "../lib/sounds";
 
 export default function QuizModal({
   enabledOps,
@@ -30,8 +31,10 @@ export default function QuizModal({
 
   function submit() {
     if (parseInt(input, 10) === question.answer) {
+      playQuizCorrect();
       onSuccess();
     } else {
+      playQuizWrong();
       setShake(true);
       setWrong(true);
       setInput("");

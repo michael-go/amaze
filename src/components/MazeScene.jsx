@@ -13,6 +13,7 @@ import {
   nearestCorridor,
 } from "../lib/maze";
 import { levelTheme } from "../lib/wallTexture";
+import { playWallBump } from "../lib/sounds";
 import { MazeFloor, MazeWalls, PlayerLight, StartMarker } from "./MazeElements";
 import KidCharacter from "./KidCharacter";
 import TreasureChest from "./TreasureChest";
@@ -65,6 +66,7 @@ export default function MazeScene({
   const flyLanding = useRef(false);
   const playerY = useRef(0);
   const skipCleared = useRef(false);
+  const bumpCooldown = useRef(0);
 
   const wallBoxes = useMemo(
     () => getWallBoxes(game.cells, game.mask),
@@ -246,6 +248,15 @@ export default function MazeScene({
         } else {
           if (!collidesWithWall(nx, pos.z)) pos.x = nx;
           if (!collidesWithWall(pos.x, nz)) pos.z = nz;
+
+          // Thud when walking head-on into a wall (not when sliding along it)
+          bumpCooldown.current -= delta;
+          const blocked =
+            Math.hypot(pos.x - ox, pos.z - oz) < PLAYER_SPEED * delta * 0.15;
+          if (blocked && bumpCooldown.current <= 0) {
+            bumpCooldown.current = 0.5;
+            playWallBump();
+          }
         }
 
         // Track distance for step counting (flying doesn't cost steps)

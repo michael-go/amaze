@@ -22,7 +22,13 @@ import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
 import { ITEM_COLORS } from "./MagicItem";
-import { playMagicPickup, playTreasureWin } from "../lib/sounds";
+import {
+  playMagicPickup,
+  playTreasureWin,
+  playCountdownTick,
+  playCountdownGo,
+  playFlyWhoosh,
+} from "../lib/sounds";
 
 function newGame(level, mazeSeed, itemsSeed) {
   // Maze structure RNG
@@ -279,10 +285,12 @@ export default function App() {
   useEffect(() => {
     if (screen !== "countdown") return;
     if (countdown <= 0) {
+      playCountdownGo();
       setTopView(false);
       setScreen("playing");
       return;
     }
+    if (countdown <= 3) playCountdownTick();
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [screen, countdown]);
@@ -356,6 +364,7 @@ export default function App() {
           setStepsRemaining(maxSteps);
           setMagicItems((prev) => prev.filter((it) => it !== item));
         } else {
+          if (item.type === "fly") playFlyWhoosh();
           setActivePower(item.type);
           setMagicItems((prev) => prev.filter((it) => it !== item));
         }
