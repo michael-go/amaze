@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "../lib/useKeyboardControls";
 import * as THREE from "three";
 import { Sky, Stars } from "@react-three/drei";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import {
   getWallBoxes,
   CELL_SIZE,
@@ -393,6 +394,17 @@ export default function MazeScene({
         playerY={playerY}
         frozen={frozen || won}
       />
+
+      <EffectComposer multisampling={4}>
+        <Bloom
+          mipmapBlur
+          intensity={0.8}
+          luminanceThreshold={0.6}
+          luminanceSmoothing={0.3}
+        />
+        {/* Skip the vignette on the map so the corners stay readable */}
+        {!topView && <Vignette offset={0.25} darkness={0.6} />}
+      </EffectComposer>
     </>
   );
 }
