@@ -114,6 +114,7 @@ export default function KidCharacter({
   activePower,
   frozen,
   playerY,
+  won,
 }) {
   const groupRef = useRef();
   const leftLegRef = useRef();
@@ -121,7 +122,10 @@ export default function KidCharacter({
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const auraRef = useRef();
+  const shadowRef = useRef();
   const prevSwing = useRef(0);
+  const squash = useRef(0);
+  const wasMoving = useRef(false);
 
   const isGhost = activePower === "ghost";
   const isFlying = activePower === "fly";
@@ -154,14 +158,33 @@ export default function KidCharacter({
     src.start();
   };
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     const p = playerPos.current;
     const yOff = playerY ? playerY.current : 0;
     groupRef.current.position.set(p.x, yOff, p.z);
     groupRef.current.rotation.y = yaw.current + Math.PI;
 
-    if (isFlying) {
+    // Brief squash & stretch when starting/stopping a run
+    const moving = isMoving.current && !frozen && !won;
+    if (moving !== wasMoving.current) {
+      wasMoving.current = moving;
+      squash.current = 1;
+    }
+    squash.current = Math.max(0, squash.current - delta * 4);
+    const sq = Math.sin(squash.current * Math.PI) * 0.1;
+    groupRef.current.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
+
+    if (won && !isFlying) {
+      // Victory: arms up, hopping in place
+      const t = clock.elapsedTime;
+      const hop = Math.abs(Math.sin(t * 5)) * 0.18;
+      groupRef.current.position.y = yOff + hop;
+      if (leftArmRef.current) leftArmRef.current.rotation.set(0, 0, -2.5);
+      if (rightArmRef.current) rightArmRef.current.rotation.set(0, 0, 2.5);
+      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+    } else if (isFlying) {
       // Flying pose: arms out to sides, legs trailing back, gentle sway
       const t = clock.elapsedTime;
       const flap = Math.sin(t * 2) * 0.12;
@@ -211,10 +234,29 @@ export default function KidCharacter({
       auraRef.current.scale.setScalar(1 + Math.sin(t * 4) * 0.15);
       auraRef.current.material.opacity = 0.15 + Math.sin(t * 3) * 0.08;
     }
+
+    // Shadow blob stays on the floor and fades/shrinks with altitude
+    if (shadowRef.current) {
+      const groupY = groupRef.current.position.y;
+      shadowRef.current.position.y = 0.02 - groupY;
+      const k = 1 / (1 + groupY * 0.3);
+      shadowRef.current.scale.setScalar(k);
+      shadowRef.current.material.opacity = 0.3 * k;
+    }
   });
 
   return (
     <group ref={groupRef}>
+      {/* Soft shadow blob grounding the character */}
+      <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.35, 24]} />
+        <meshBasicMaterial
+          color="#000000"
+          transparent
+          opacity={0.3}
+          depthWrite={false}
+        />
+      </mesh>
       {/* Power-up aura */}
       {(isGhost || isFlying) && (
         <mesh ref={auraRef} position={[0, 0.85, 0]}>

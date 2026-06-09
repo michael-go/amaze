@@ -173,6 +173,8 @@ export default function App() {
   const [stepsDepleted, setStepsDepleted] = useState(0);
   const [burst, setBurst] = useState(null);
   const burstId = useRef(0);
+  const winTimer = useRef(null);
+  useEffect(() => () => clearTimeout(winTimer.current), []);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -185,6 +187,7 @@ export default function App() {
   }, []);
 
   const beginLevel = useCallback((lvl, g) => {
+    clearTimeout(winTimer.current);
     setLevel(lvl);
     localStorage.setItem("amaze:level", String(lvl));
     setGame(g);
@@ -389,8 +392,11 @@ export default function App() {
       color: "#ffd700",
     });
     setWon(true);
-    setScreen("won");
-    setTopView(true);
+    // Let the victory dance and burst play out before covering the screen
+    winTimer.current = setTimeout(() => {
+      setScreen("won");
+      setTopView(true);
+    }, 2200);
   }, [game]);
 
   const jumpToLevel = useCallback(

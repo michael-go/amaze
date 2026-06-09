@@ -400,6 +400,7 @@ export default function MazeScene({
         activePower={activePower}
         playerY={playerY}
         frozen={frozen || won}
+        won={won}
       />
       {burst && (
         <PickupBurst key={burst.id} burst={burst} onDone={onBurstDone} />
