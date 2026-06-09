@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS } from "../lib/maze";
 
-const ITEM_COLORS = {
+export const ITEM_COLORS = {
   ghost: { color: "#44aaff", emissive: "#2266ff" },
   fly: { color: "#ffcc00", emissive: "#ff8800" },
   trail: { color: "#44ee88", emissive: "#22aa55" },

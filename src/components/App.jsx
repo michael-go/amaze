@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import MazeScene from "./MazeScene";
 import HUD from "./HUD";
@@ -21,6 +21,7 @@ import { getLevelConfig } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
+import { ITEM_COLORS } from "./MagicItem";
 import { playMagicPickup, playTreasureWin } from "../lib/sounds";
 
 function newGame(level, mazeSeed, itemsSeed) {
@@ -170,6 +171,8 @@ export default function App() {
   const [skippedItem, setSkippedItem] = useState(null);
   const playerInfoRef = useRef(null);
   const [stepsDepleted, setStepsDepleted] = useState(0);
+  const [burst, setBurst] = useState(null);
+  const burstId = useRef(0);
   const [showSettings, setShowSettings] = useState(false);
   const [savedLevel] = useState(() => {
     const n = parseInt(localStorage.getItem("amaze:level"), 10);
@@ -317,6 +320,12 @@ export default function App() {
     (item) => {
       const collectItem = () => {
         playMagicPickup();
+        setBurst({
+          id: ++burstId.current,
+          x: item.worldX,
+          z: item.worldZ,
+          color: ITEM_COLORS[item.type]?.color || "#ffffff",
+        });
         setSkippedItem(null);
         if (item.type === "trail") {
           setTrailActive(true);
@@ -373,10 +382,16 @@ export default function App() {
 
   const handleWin = useCallback(() => {
     playTreasureWin();
+    setBurst({
+      id: ++burstId.current,
+      x: game.exitPos[0],
+      z: game.exitPos[2],
+      color: "#ffd700",
+    });
     setWon(true);
     setScreen("won");
     setTopView(true);
-  }, []);
+  }, [game]);
 
   const jumpToLevel = useCallback(
     (lvl) => {
@@ -607,6 +622,8 @@ export default function App() {
           trailActive={trailActive}
           skippedItem={skippedItem}
           playerInfoRef={playerInfoRef}
+          burst={burst}
+          onBurstDone={() => setBurst(null)}
         />
       </Canvas>
 
@@ -677,6 +694,7 @@ export default function App() {
 
       {screen === "won" && (
         <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
+          <Confetti />
           <div style={styles.titleBox}>
             <h1
               style={{
@@ -735,6 +753,52 @@ export default function App() {
         itemsSeed={itemsSeed}
         onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
       />
+    </div>
+  );
+}
+
+function Confetti() {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: 80 }, (_, i) => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 2.5,
+        dur: 2.5 + Math.random() * 2,
+        color: ["#ff6b35", "#ffd700", "#00ff88", "#44aaff", "#ff44aa"][i % 5],
+        size: 6 + Math.random() * 7,
+        rot: Math.random() * 360,
+      })),
+    [],
+  );
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+      }}
+    >
+      {pieces.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            top: -20,
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size * 0.6,
+            background: p.color,
+            transform: `rotate(${p.rot}deg)`,
+            animation: `confetti-fall ${p.dur}s linear ${p.delay}s infinite`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes confetti-fall {
+          to { transform: translateY(110vh) rotate(720deg); }
+        }
+      `}</style>
     </div>
   );
 }

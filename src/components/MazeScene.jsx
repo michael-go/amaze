@@ -17,6 +17,7 @@ import { MazeFloor, MazeWalls, PlayerLight, StartMarker } from "./MazeElements";
 import KidCharacter from "./KidCharacter";
 import TreasureChest from "./TreasureChest";
 import MagicItem from "./MagicItem";
+import { PickupBurst } from "./Particles";
 
 const PLAYER_SPEED = 5;
 const TURN_SPEED = 2.5;
@@ -48,6 +49,8 @@ export default function MazeScene({
   trailActive,
   skippedItem,
   playerInfoRef,
+  burst,
+  onBurstDone,
 }) {
   const theme = levelTheme(level);
   const { camera } = useThree();
@@ -394,6 +397,9 @@ export default function MazeScene({
         playerY={playerY}
         frozen={frozen || won}
       />
+      {burst && (
+        <PickupBurst key={burst.id} burst={burst} onDone={onBurstDone} />
+      )}
 
       <EffectComposer multisampling={4}>
         <Bloom
