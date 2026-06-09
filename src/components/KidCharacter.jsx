@@ -122,7 +122,6 @@ export default function KidCharacter({
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const auraRef = useRef();
-  const shadowRef = useRef();
   const prevSwing = useRef(0);
   const squash = useRef(0);
   const wasMoving = useRef(false);
@@ -234,29 +233,10 @@ export default function KidCharacter({
       auraRef.current.scale.setScalar(1 + Math.sin(t * 4) * 0.15);
       auraRef.current.material.opacity = 0.15 + Math.sin(t * 3) * 0.08;
     }
-
-    // Shadow blob stays on the floor and fades/shrinks with altitude
-    if (shadowRef.current) {
-      const groupY = groupRef.current.position.y;
-      shadowRef.current.position.y = 0.02 - groupY;
-      const k = 1 / (1 + groupY * 0.3);
-      shadowRef.current.scale.setScalar(k);
-      shadowRef.current.material.opacity = 0.3 * k;
-    }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Soft shadow blob grounding the character */}
-      <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.35, 24]} />
-        <meshBasicMaterial
-          color="#000000"
-          transparent
-          opacity={0.3}
-          depthWrite={false}
-        />
-      </mesh>
       {/* Power-up aura */}
       {(isGhost || isFlying) && (
         <mesh ref={auraRef} position={[0, 0.85, 0]}>
