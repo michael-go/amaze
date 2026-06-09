@@ -1,7 +1,7 @@
 let ctx = null;
 let lpf = null;
 
-function getCtx() {
+export function getCtx() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     lpf = ctx.createBiquadFilter();

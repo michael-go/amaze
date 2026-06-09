@@ -1,7 +1,7 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { isMuted } from "../lib/sounds";
+import { isMuted, getCtx } from "../lib/sounds";
 
 // ─── Curved backwards cap brim — D-shaped with variable depth and natural droop ───
 function BrimGeometry() {
@@ -122,20 +122,13 @@ export default function KidCharacter({
   const rightArmRef = useRef();
   const auraRef = useRef();
   const prevSwing = useRef(0);
-  const audioCtx = useRef(null);
 
   const isGhost = activePower === "ghost";
   const isFlying = activePower === "fly";
 
   const playFootstep = () => {
     if (isMuted()) return;
-    if (!audioCtx.current) {
-      audioCtx.current = new (
-        window.AudioContext || window.webkitAudioContext
-      )();
-    }
-    const ctx = audioCtx.current;
-    if (ctx.state === "suspended") ctx.resume();
+    const ctx = getCtx();
     // Soft step: short filtered noise with gentle attack
     const duration = 0.07;
     const bufSize = Math.ceil(ctx.sampleRate * duration);

@@ -164,9 +164,10 @@ export default function App() {
   });
   const [magicItems, setMagicItems] = useState([]);
   const [activePower, setActivePower] = useState(null);
-  const [powerEndTime, setPowerEndTime] = useState(0);
+  const [powerSecs, setPowerSecs] = useState(0);
   const [trailActive, setTrailActive] = useState(false);
-  const [skippedItem, setSkippedItem] = useState(-1);
+  // Cell key ("x,y") of an item whose pickup quiz was cancelled
+  const [skippedItem, setSkippedItem] = useState(null);
   const playerInfoRef = useRef(null);
   const [stepsDepleted, setStepsDepleted] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -206,8 +207,9 @@ export default function App() {
       ),
     );
     setActivePower(null);
-    setPowerEndTime(0);
+    setPowerSecs(0);
     setTrailActive(false);
+    setSkippedItem(null);
     setStepsDepleted(0);
     // Reset to Math.random for runtime spawns (step depletion bonus items)
     setRng(Math.random);
@@ -271,66 +273,67 @@ export default function App() {
       setQuizInfo({
         onSuccess: () => {
           setStepsRemaining((prev) => prev + Math.ceil(maxSteps * 0.4));
-          setStepsDepleted((prev) => {
-            const next = prev + 1;
-            // Every 2nd depletion, spawn a bonus item
-            if (next % 2 === 0) {
-              setMagicItems((items) => {
-                // Spawn trail if not yet active, with 50% chance; otherwise steps
-                const hasTrail =
-                  trailActive || items.some((it) => it.type === "trail");
-                const type =
-                  !hasTrail && Math.random() < 0.5 ? MAGIC_TRAIL : MAGIC_STEPS;
-                const newItem = placeSingleItem(
-                  game.cells,
-                  items,
-                  type,
-                  game.mask,
-                  game.startCell,
-                  game.exitCell,
-                );
-                return newItem ? [...items, newItem] : items;
-              });
-            }
-            return next;
-          });
+          const next = stepsDepleted + 1;
+          setStepsDepleted(next);
+          // Every 2nd depletion, spawn a bonus item
+          if (next % 2 === 0) {
+            // Spawn trail if not yet active, with 50% chance; otherwise steps
+            const hasTrail =
+              trailActive || magicItems.some((it) => it.type === "trail");
+            const type =
+              !hasTrail && Math.random() < 0.5 ? MAGIC_TRAIL : MAGIC_STEPS;
+            const newItem = placeSingleItem(
+              game.cells,
+              magicItems,
+              type,
+              game.mask,
+              game.startCell,
+              game.exitCell,
+            );
+            if (newItem) setMagicItems((items) => [...items, newItem]);
+          }
         },
         canCancel: false,
         prompt: t.quizStepsPrompt,
       });
     }
-  }, [stepsRemaining, maxSteps, screen, quizInfo, t, game.cells, trailActive]);
+  }, [
+    stepsRemaining,
+    maxSteps,
+    screen,
+    quizInfo,
+    t,
+    game,
+    trailActive,
+    stepsDepleted,
+    magicItems,
+  ]);
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
   }, []);
 
   const onPickupItem = useCallback(
-    (index) => {
+    (item) => {
       const collectItem = () => {
         playMagicPickup();
-        setSkippedItem(-1);
-        setMagicItems((prev) => {
-          const item = prev[index];
-          if (!item) return prev;
-          if (item.type === "trail") {
-            setTrailActive(true);
-            return prev.filter((it) => it.type !== "trail");
-          }
-          if (item.type === "steps") {
-            setStepsRemaining(maxSteps);
-            return prev.filter((_, i) => i !== index);
-          }
+        setSkippedItem(null);
+        if (item.type === "trail") {
+          setTrailActive(true);
+          setMagicItems((prev) => prev.filter((it) => it.type !== "trail"));
+        } else if (item.type === "steps") {
+          setStepsRemaining(maxSteps);
+          setMagicItems((prev) => prev.filter((it) => it !== item));
+        } else {
           setActivePower(item.type);
-          setPowerEndTime(Date.now() + 5000);
-          return prev.filter((_, i) => i !== index);
-        });
+          setMagicItems((prev) => prev.filter((it) => it !== item));
+        }
       };
       setQuizInfo({
         onSuccess: collectItem,
         canCancel: true,
         prompt: t.quizMagicPrompt,
-        onCancel: () => setSkippedItem(index),
+        onCancel: () => setSkippedItem(`${item.cellX},${item.cellY}`),
       });
     },
     [t, maxSteps],
@@ -338,7 +341,7 @@ export default function App() {
 
   const onPowerEnd = useCallback(() => {
     setActivePower(null);
-    setPowerEndTime(0);
+    setPowerSecs(0);
   }, []);
 
   const debugSpawnItem = useCallback((type) => {
@@ -600,6 +603,7 @@ export default function App() {
           onPickupItem={onPickupItem}
           activePower={activePower}
           onPowerEnd={onPowerEnd}
+          onPowerTick={setPowerSecs}
           trailActive={trailActive}
           skippedItem={skippedItem}
           playerInfoRef={playerInfoRef}
@@ -622,7 +626,7 @@ export default function App() {
         stepsRemaining={stepsRemaining}
         maxSteps={maxSteps}
         activePower={activePower}
-        powerEndTime={powerEndTime}
+        powerSecs={powerSecs}
         trailActive={trailActive}
       />
 

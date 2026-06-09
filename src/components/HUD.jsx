@@ -9,30 +9,11 @@ export default function HUD({
   stepsRemaining,
   maxSteps,
   activePower,
-  powerEndTime,
+  powerSecs,
   trailActive,
 }) {
   const { t } = useI18n();
   const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1;
-
-  // Power-up countdown
-  const [powerSecs, setPowerSecs] = useState(0);
-  useEffect(() => {
-    if (!activePower || !powerEndTime) {
-      setPowerSecs(0);
-      return;
-    }
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((powerEndTime - Date.now()) / 1000),
-      );
-      setPowerSecs(remaining);
-    };
-    tick();
-    const id = setInterval(tick, 200);
-    return () => clearInterval(id);
-  }, [activePower, powerEndTime]);
 
   // Brief flash when steps are refilled by magic item
   const [showStepsFlash, setShowStepsFlash] = useState(false);

@@ -14,8 +14,13 @@ const DEADZONE = 0.15;
 const TURN_DEADZONE = 0.4;
 
 export default function TouchControls() {
+  // No hooks before this return — hooks live in TouchJoystick so the
+  // early exit doesn't violate the Rules of Hooks
   if (!isTouchDevice()) return null;
+  return <TouchJoystick />;
+}
 
+function TouchJoystick() {
   const originRef = useRef(null);
   const activeKeys = useRef({
     ArrowUp: false,

@@ -43,6 +43,7 @@ export default function MazeScene({
   onPickupItem,
   activePower,
   onPowerEnd,
+  onPowerTick,
   trailActive,
   skippedItem,
   playerInfoRef,
@@ -56,6 +57,7 @@ export default function MazeScene({
   const isMoving = useRef(false);
   const distAccum = useRef(0);
   const powerTimer = useRef(0);
+  const lastPowerSecs = useRef(-1);
   const flyLanding = useRef(false);
   const playerY = useRef(0);
   const skipCleared = useRef(false);
@@ -95,6 +97,7 @@ export default function MazeScene({
     yaw.current = game.startYaw ?? Math.PI;
     distAccum.current = 0;
     powerTimer.current = 0;
+    lastPowerSecs.current = -1;
     flyLanding.current = false;
     playerY.current = 0;
     setVisitedCells(new Set());
@@ -126,6 +129,9 @@ export default function MazeScene({
   }
 
   useFrame((_, delta) => {
+    // Clamp delta so a tab switch / GC hitch can't tunnel the player
+    // through a wall or overshoot the camera lerps
+    delta = Math.min(delta, 0.05);
     const pos = playerPos.current;
     if (playerInfoRef) playerInfoRef.current = { pos, yaw: yaw.current };
     const isGhost = activePower === MAGIC_GHOST;
@@ -157,10 +163,16 @@ export default function MazeScene({
 
     if (won || frozen) return;
 
-    // Power-up timer
+    // Power-up timer (single source of truth — HUD countdown is fed from here
+    // so it pauses together with the game when frozen)
     if (activePower) {
       powerTimer.current += delta;
       const duration = isGhost ? GHOST_DURATION : FLY_DURATION;
+      const secs = Math.max(0, Math.ceil(duration - powerTimer.current));
+      if (onPowerTick && secs !== lastPowerSecs.current) {
+        lastPowerSecs.current = secs;
+        onPowerTick(secs);
+      }
       if (powerTimer.current >= duration) {
         powerTimer.current = 0;
         // Snap to nearest corridor so player doesn't end up stuck inside a wall
@@ -170,6 +182,7 @@ export default function MazeScene({
         if (isFlying) {
           flyLanding.current = true;
         }
+        lastPowerSecs.current = -1;
         onPowerEnd();
       }
     }
@@ -261,24 +274,27 @@ export default function MazeScene({
       // Check magic item pickup
       if (magicItems && onPickupItem && !activePower) {
         // After quiz cancel, wait until player moves away before re-triggering
-        if (skippedItem >= 0 && skippedItem < magicItems.length) {
-          const si = magicItems[skippedItem];
+        const skipped = skippedItem
+          ? magicItems.find(
+              (it) => `${it.cellX},${it.cellY}` === skippedItem,
+            ) || null
+          : null;
+        if (skipped) {
           const sd = Math.sqrt(
-            (pos.x - si.worldX) ** 2 + (pos.z - si.worldZ) ** 2,
+            (pos.x - skipped.worldX) ** 2 + (pos.z - skipped.worldZ) ** 2,
           );
           if (sd >= PICKUP_RADIUS) skipCleared.current = true;
         } else {
           skipCleared.current = true;
         }
-        for (let i = 0; i < magicItems.length; i++) {
-          if (i === skippedItem && !skipCleared.current) continue;
-          const item = magicItems[i];
+        for (const item of magicItems) {
+          if (item === skipped && !skipCleared.current) continue;
           const dx2 = pos.x - item.worldX;
           const dz2 = pos.z - item.worldZ;
           if (Math.sqrt(dx2 * dx2 + dz2 * dz2) < PICKUP_RADIUS) {
             powerTimer.current = 0;
             skipCleared.current = false;
-            onPickupItem(i);
+            onPickupItem(item);
             break;
           }
         }
