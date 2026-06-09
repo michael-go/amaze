@@ -9,6 +9,8 @@ export const LEVEL_THEMES = [
     emissive: "#000000",
     floor: "#3a3a4e",
     pattern: "stone",
+    fog: "#3a3a52",
+    fogDensity: 0.025,
   }, // 0: stone
   {
     wall: "#8a5a30",
@@ -17,6 +19,8 @@ export const LEVEL_THEMES = [
     emissive: "#110500",
     floor: "#4a3020",
     pattern: "brick",
+    fog: "#463422",
+    fogDensity: 0.025,
   }, // 1: sandstone brick
   {
     wall: "#2a6a4a",
@@ -25,6 +29,8 @@ export const LEVEL_THEMES = [
     emissive: "#001a0a",
     floor: "#3a5a48",
     pattern: "mossy",
+    fog: "#22382c",
+    fogDensity: 0.03,
   }, // 2: mossy dungeon
   {
     wall: "#7a3020",
@@ -33,6 +39,8 @@ export const LEVEL_THEMES = [
     emissive: "#200500",
     floor: "#3a1808",
     pattern: "crack",
+    fog: "#2a1208",
+    fogDensity: 0.04,
   }, // 3: volcanic
   {
     wall: "#3a3a6a",
@@ -41,6 +49,8 @@ export const LEVEL_THEMES = [
     emissive: "#000010",
     floor: "#2e2e48",
     pattern: "metal",
+    fog: "#222238",
+    fogDensity: 0.022,
   }, // 4: metal fortress
   {
     wall: "#5a3a7a",
@@ -49,6 +59,8 @@ export const LEVEL_THEMES = [
     emissive: "#1a0a30",
     floor: "#5a4a6e",
     pattern: "crystal",
+    fog: "#2a1e3e",
+    fogDensity: 0.028,
   }, // 5: arcane crystal
   {
     wall: "#3a6a7a",
@@ -57,6 +69,8 @@ export const LEVEL_THEMES = [
     emissive: "#001418",
     floor: "#263a42",
     pattern: "ice",
+    fog: "#2c4450",
+    fogDensity: 0.035,
   }, // 6: ice cave
   {
     wall: "#6a5a2a",
@@ -65,6 +79,8 @@ export const LEVEL_THEMES = [
     emissive: "#100800",
     floor: "#3a3520",
     pattern: "brick",
+    fog: "#33301e",
+    fogDensity: 0.028,
   }, // 7: ancient ruins
 ];
 
@@ -166,6 +182,7 @@ export function levelTheme(level) {
     wall: shiftColor(base.wall),
     floor: shiftColor(base.floor),
     emissive: shiftColor(base.emissive),
+    fog: shiftColor(base.fog),
     rough: Math.min(1, base.rough + ((cycle * 7) % 5) * 0.05 - 0.1),
     metal: Math.min(
       1,

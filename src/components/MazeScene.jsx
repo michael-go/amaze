@@ -351,6 +351,10 @@ export default function MazeScene({
 
   return (
     <>
+      {/* Fog only in gameplay view — it would wash out the top-down map */}
+      {!topView && (
+        <fogExp2 attach="fog" args={[theme.fog, theme.fogDensity]} />
+      )}
       <ambientLight intensity={topView ? 2.0 : 1.0} />
       <hemisphereLight args={["#8888aa", "#444466", 0.6]} />
       {!topView && <PlayerLight playerPos={playerPos} />}
