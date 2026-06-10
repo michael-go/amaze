@@ -1,5 +1,6 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
+import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { isMuted, getCtx } from "../lib/sounds";
 
@@ -260,43 +261,71 @@ export default function KidCharacter({
         <meshStandardMaterial color="#222" />
       </mesh>
 
-      <mesh position={[0, 0.95, 0]}>
-        <boxGeometry args={[0.34, 0.45, 0.22]} />
+      <RoundedBox
+        args={[0.34, 0.45, 0.22]}
+        radius={0.08}
+        smoothness={4}
+        position={[0, 0.95, 0]}
+      >
         <meshStandardMaterial color="#e63946" />
-      </mesh>
+      </RoundedBox>
 
-      <mesh position={[0, 0.65, 0.001]}>
-        <boxGeometry args={[0.34, 0.2, 0.22]} />
+      <RoundedBox
+        args={[0.34, 0.22, 0.22]}
+        radius={0.07}
+        smoothness={4}
+        position={[0, 0.65, 0.001]}
+      >
         <meshStandardMaterial color="#457b9d" />
-      </mesh>
+      </RoundedBox>
 
       <group position={[-0.11, 0.55, 0]} ref={leftLegRef}>
-        <mesh position={[0, -0.2, 0]}>
-          <boxGeometry args={[0.13, 0.4, 0.15]} />
+        <RoundedBox
+          args={[0.13, 0.4, 0.15]}
+          radius={0.05}
+          smoothness={4}
+          position={[0, -0.2, 0]}
+        >
           <meshStandardMaterial color="#457b9d" />
-        </mesh>
-        <mesh position={[0, -0.42, 0.03]}>
-          <boxGeometry args={[0.15, 0.08, 0.22]} />
+        </RoundedBox>
+        <RoundedBox
+          args={[0.15, 0.1, 0.24]}
+          radius={0.045}
+          smoothness={4}
+          position={[0, -0.42, 0.03]}
+        >
           <meshStandardMaterial color="#333" />
-        </mesh>
+        </RoundedBox>
       </group>
 
       <group position={[0.11, 0.55, 0]} ref={rightLegRef}>
-        <mesh position={[0, -0.2, 0]}>
-          <boxGeometry args={[0.13, 0.4, 0.15]} />
+        <RoundedBox
+          args={[0.13, 0.4, 0.15]}
+          radius={0.05}
+          smoothness={4}
+          position={[0, -0.2, 0]}
+        >
           <meshStandardMaterial color="#457b9d" />
-        </mesh>
-        <mesh position={[0, -0.42, 0.03]}>
-          <boxGeometry args={[0.15, 0.08, 0.22]} />
+        </RoundedBox>
+        <RoundedBox
+          args={[0.15, 0.1, 0.24]}
+          radius={0.045}
+          smoothness={4}
+          position={[0, -0.42, 0.03]}
+        >
           <meshStandardMaterial color="#333" />
-        </mesh>
+        </RoundedBox>
       </group>
 
       <group position={[-0.25, 1.1, 0]} ref={leftArmRef}>
-        <mesh position={[0, -0.18, 0]}>
-          <boxGeometry args={[0.11, 0.36, 0.13]} />
+        <RoundedBox
+          args={[0.11, 0.36, 0.13]}
+          radius={0.05}
+          smoothness={4}
+          position={[0, -0.18, 0]}
+        >
           <meshStandardMaterial color="#e63946" />
-        </mesh>
+        </RoundedBox>
         <mesh position={[0, -0.38, 0]}>
           <sphereGeometry args={[0.07, 8, 8]} />
           <meshStandardMaterial color="#fdd9b5" />
@@ -304,10 +333,14 @@ export default function KidCharacter({
       </group>
 
       <group position={[0.25, 1.1, 0]} ref={rightArmRef}>
-        <mesh position={[0, -0.18, 0]}>
-          <boxGeometry args={[0.11, 0.36, 0.13]} />
+        <RoundedBox
+          args={[0.11, 0.36, 0.13]}
+          radius={0.05}
+          smoothness={4}
+          position={[0, -0.18, 0]}
+        >
           <meshStandardMaterial color="#e63946" />
-        </mesh>
+        </RoundedBox>
         <mesh position={[0, -0.38, 0]}>
           <sphereGeometry args={[0.07, 8, 8]} />
           <meshStandardMaterial color="#fdd9b5" />
