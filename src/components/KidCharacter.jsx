@@ -317,7 +317,7 @@ export default function KidCharacter({
         </RoundedBox>
       </group>
 
-      <group position={[-0.25, 1.1, 0]} ref={leftArmRef}>
+      <group position={[-0.205, 1.12, 0]} ref={leftArmRef}>
         <RoundedBox
           args={[0.11, 0.36, 0.13]}
           radius={0.05}
@@ -332,7 +332,7 @@ export default function KidCharacter({
         </mesh>
       </group>
 
-      <group position={[0.25, 1.1, 0]} ref={rightArmRef}>
+      <group position={[0.205, 1.12, 0]} ref={rightArmRef}>
         <RoundedBox
           args={[0.11, 0.36, 0.13]}
           radius={0.05}
