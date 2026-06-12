@@ -175,7 +175,7 @@ export default function App() {
       const saved = JSON.parse(localStorage.getItem("amaze:ops"));
       if (Array.isArray(saved) && saved.length > 0) return saved;
     } catch {}
-    return ["+", "-"];
+    return ["+", "-", "count", "missing", "pattern", "halfDouble", "clock"];
   });
   const [magicItems, setMagicItems] = useState([]);
   const [activePower, setActivePower] = useState(null);

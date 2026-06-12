@@ -3,6 +3,132 @@ import { generateQuestion } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
 import { playQuizCorrect, playQuizWrong } from "../lib/sounds";
 
+function ClockFace({ hour }) {
+  const a = (((hour % 12) * 30 - 90) * Math.PI) / 180;
+  const numbers = Array.from({ length: 12 }, (_, i) => {
+    const ang = (((i + 1) * 30 - 90) * Math.PI) / 180;
+    return { n: i + 1, x: 50 + 38 * Math.cos(ang), y: 50 + 38 * Math.sin(ang) };
+  });
+  return (
+    <svg
+      width={140}
+      height={140}
+      viewBox="0 0 100 100"
+      style={{ marginBottom: 8 }}
+    >
+      <circle
+        cx="50"
+        cy="50"
+        r="47"
+        fill="#fffbe9"
+        stroke="#ff6b35"
+        strokeWidth="3"
+      />
+      {numbers.map(({ n, x, y }) => (
+        <text
+          key={n}
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="9"
+          fontWeight="bold"
+          fill="#333"
+        >
+          {n}
+        </text>
+      ))}
+      <line
+        x1="50"
+        y1="50"
+        x2="50"
+        y2="20"
+        stroke="#888"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="50"
+        y1="50"
+        x2={50 + 20 * Math.cos(a)}
+        y2={50 + 20 * Math.sin(a)}
+        stroke="#222"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <circle cx="50" cy="50" r="2.5" fill="#222" />
+    </svg>
+  );
+}
+
+const FRAC_KEYS = {
+  half: "fracHalf",
+  third: "fracThird",
+  quarter: "fracQuarter",
+};
+
+function QuestionDisplay({ q, t }) {
+  // Symbolic questions render LTR even in Hebrew; sentences follow the language.
+  const symbolic = (text, full) => (
+    <div
+      style={{
+        ...styles.question,
+        direction: "ltr",
+        ...(text.length > 8 ? { fontSize: 36, letterSpacing: 2 } : {}),
+      }}
+    >
+      {full ? text : `${text} = ?`}
+    </div>
+  );
+  switch (q.kind) {
+    case "missing":
+    case "pattern":
+      return symbolic(q.text, true);
+    case "count":
+      return (
+        <>
+          <div style={styles.emojis}>{q.emojis}</div>
+          <div style={styles.sentence} dir={t.dir}>
+            {t.quizHowMany}
+          </div>
+        </>
+      );
+    case "halfDouble":
+      return (
+        <div style={styles.sentence} dir={t.dir}>
+          {q.mode === "half"
+            ? t.quizFraction(t.fracHalf, q.n)
+            : t.quizDouble(q.n)}
+        </div>
+      );
+    case "fraction":
+      return (
+        <div style={styles.sentence} dir={t.dir}>
+          {t.quizFraction(t[FRAC_KEYS[q.frac]], q.n)}
+        </div>
+      );
+    case "money":
+      return (
+        <div style={styles.story} dir={t.dir}>
+          {q.mode === "left"
+            ? t.quizMoneyLeft(q.x, q.y)
+            : t.quizMoneyTotal(q.x, q.y)}
+        </div>
+      );
+    case "clock":
+      return (
+        <>
+          <ClockFace hour={q.hour} />
+          <div style={styles.sentence} dir={t.dir}>
+            {t.quizClock}
+          </div>
+        </>
+      );
+    default:
+      return symbolic(q.text);
+  }
+}
+
 export default function QuizModal({
   enabledOps,
   onSuccess,
@@ -59,7 +185,7 @@ export default function QuizModal({
         <div style={{ ...styles.prompt, fontSize: 18 }}>
           {promptText || "🗺️ Unlock the map!"}
         </div>
-        <div style={styles.question}>{question.text} = ?</div>
+        <QuestionDisplay q={question} t={t} />
         {wrong && (
           <div style={{ ...styles.wrong, fontSize: 16 }}>{t.wrongAnswer}</div>
         )}
@@ -136,6 +262,25 @@ const styles = {
     fontWeight: "bold",
     letterSpacing: 4,
     marginBottom: 12,
+  },
+  emojis: {
+    fontSize: 30,
+    lineHeight: 1.5,
+    maxWidth: 320,
+    margin: "0 auto 8px",
+  },
+  sentence: {
+    color: "#fff",
+    fontSize: 30,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  story: {
+    color: "#fff",
+    fontSize: 22,
+    lineHeight: 1.5,
+    maxWidth: 340,
+    margin: "0 auto 12px",
   },
   wrong: {
     color: "#ff4444",

@@ -1,7 +1,20 @@
 import { useState } from "react";
-import { ALL_OPS } from "../lib/quiz";
+import { ALL_OPS, EXTRA_TYPES } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
 import { isMuted, setMuted } from "../lib/sounds";
+
+const TYPE_ICONS = {
+  missing: "❓",
+  pattern: "🔢",
+  count: "🍎",
+  halfDouble: "➗",
+  twoStep: "🧮",
+  fraction: "½",
+  money: "💰",
+  clock: "🕒",
+};
+
+const typeLabel = (t, key) => t["type" + key[0].toUpperCase() + key.slice(1)];
 
 export default function SettingsModal({ enabledOps, onSave, onClose }) {
   const { t } = useI18n();
@@ -42,6 +55,23 @@ export default function SettingsModal({ enabledOps, onSave, onClose }) {
                 onClick={() => toggle(op)}
               >
                 {op}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>{t.quizTypes}</div>
+          <div style={styles.typesGrid}>
+            {EXTRA_TYPES.map((key) => (
+              <button
+                key={key}
+                style={{
+                  ...styles.typeBtn,
+                  ...(selected.has(key) ? styles.opBtnActive : {}),
+                }}
+                onClick={() => toggle(key)}
+              >
+                {TYPE_ICONS[key]} {typeLabel(t, key)}
               </button>
             ))}
           </div>
@@ -121,6 +151,25 @@ const styles = {
     width: 52,
     height: 52,
     fontSize: 24,
+    fontWeight: "bold",
+    background: "#222",
+    color: "#666",
+    border: "2px solid #333",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  typesGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    maxWidth: 340,
+  },
+  typeBtn: {
+    height: 36,
+    padding: "0 12px",
+    fontSize: 13,
     fontWeight: "bold",
     background: "#222",
     color: "#666",
