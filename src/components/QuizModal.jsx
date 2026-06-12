@@ -146,6 +146,16 @@ export default function QuizModal({
     inputRef.current?.focus();
   }, []);
 
+  // Expose the answer for automated tests (scripts/screenshot/) — only when
+  // the page is loaded with a #debug or #test hash
+  useEffect(() => {
+    if (!/debug|test/.test(window.location.hash)) return;
+    window.__quizAnswer = question.answer;
+    return () => {
+      delete window.__quizAnswer;
+    };
+  }, [question]);
+
   useEffect(() => {
     if (!onCancel) return;
     const onKey = (e) => {

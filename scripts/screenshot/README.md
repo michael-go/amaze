@@ -1,7 +1,10 @@
-# Screenshot tool
+# Screenshot & e2e test tools
 
-Headless-browser screenshots of the running game, for visual iteration
-without manual interaction.
+Headless-browser tooling for the running game:
+
+- `screenshot.mjs` — screenshots of any game state, for visual iteration
+- `test.mjs` — end-to-end smoke tests with assertions
+- `lib.mjs` — shared game-driving helpers both are built on
 
 ## Setup (one-time)
 
@@ -40,12 +43,39 @@ node screenshot.mjs --hold ArrowLeft:630 --spawn fly --hold ArrowUp:1200 /tmp/fl
 node screenshot.mjs --quiz clock /tmp/quiz_clock.png
 node screenshot.mjs --quiz money --lang he /tmp/quiz_money_he.png
 
+# Auto-answer the open quiz first (e.g. to capture the unlocked map view)
+node screenshot.mjs --quiz clock --solve /tmp/map_unlocked.png
+
 # Settings modal
 node screenshot.mjs --settings --lang he /tmp/settings_he.png
 
 # Crop to a region (x,y,width,height)
 node screenshot.mjs --crop 300,200,400,300 /tmp/cropped.png
 ```
+
+## End-to-end tests
+
+```bash
+node test.mjs                 # all scenarios
+node test.mjs quiz            # one scenario: quiz | pickup | settings
+```
+
+Scenarios:
+
+- **quiz** — for every quiz kind (the four ops + the eight extra types):
+  open the map quiz, verify a wrong answer is rejected with a message, then
+  verify the correct answer closes the modal and unlocks the top view
+- **pickup** — spawn a magic item, walk into it, solve the pickup quiz, and
+  verify the power banner appears
+- **settings** — toggle a quiz type, save, and verify it persists
+
+Exit code is non-zero on failure, so it can gate scripts/CI.
+
+The correct quiz answer comes from a test hook: when the page is loaded with
+a `#test` or `#debug` hash, `QuizModal` exposes `window.__quizAnswer`.
+`lib.mjs` exports the building blocks (launch, startGame, openMapQuiz,
+solveQuiz, spawnItem, hold, ...) for writing new scenarios or one-off
+verification scripts.
 
 ## Iteration loop
 

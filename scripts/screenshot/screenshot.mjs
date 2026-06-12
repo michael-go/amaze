@@ -1,4 +1,16 @@
-import puppeteer from "puppeteer";
+import {
+  launch,
+  sleep,
+  clickButton,
+  BUTTONS,
+  startGame,
+  skipCountdown,
+  setLevaValue,
+  spawnItem,
+  openMapQuiz,
+  solveQuiz,
+  screenshot,
+} from "./lib.mjs";
 
 const HELP = `
 Take automated screenshots of the running game (dev server must be up).
@@ -19,6 +31,7 @@ Options:
   --quiz KIND             force a single quiz kind and open the map quiz.
                           Kinds: + - × ÷ missing pattern count halfDouble
                                  twoStep fraction money clock
+  --solve                 auto-answer the open quiz before the screenshot
   --settings              open the settings modal (on the title screen)
   --hold KEY:MS[,...]     hold key(s) for MS milliseconds, e.g. ArrowUp:900.
                           Each key is released after its time, except the last
@@ -38,6 +51,7 @@ Examples:
   node screenshot.mjs --hold ArrowUp:900 /tmp/walk.png
   node screenshot.mjs --hold ArrowLeft:630 --spawn fly --hold ArrowUp:1200 /tmp/fly_pickup.png
   node screenshot.mjs --quiz clock /tmp/quiz_clock.png
+  node screenshot.mjs --quiz clock --solve /tmp/map_unlocked.png
   node screenshot.mjs --settings --lang he /tmp/settings_he.png
 `;
 
@@ -64,6 +78,7 @@ function parseArgs(argv) {
     else if (a === "--items-seed") opts.itemsSeed = parseInt(next(), 10);
     else if (a === "--spawn") opts.actions.push({ type: "spawn", item: next() });
     else if (a === "--quiz") opts.quiz = next();
+    else if (a === "--solve") opts.solve = true;
     else if (a === "--settings") opts.settings = true;
     else if (a === "--hold")
       for (const part of next().split(",")) {
@@ -84,99 +99,41 @@ function parseArgs(argv) {
   return opts;
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Buttons are matched by text so the script works in either language.
-const BUTTON_TEXT = {
-  start: /START|CONTINUE|התחילו|המשיכו/,
-  topView: /TOP VIEW|מבט על/,
-  settings: /SETTINGS|הגדרות/,
-};
-
-async function clickButton(page, regex) {
-  for (const btn of await page.$$("button")) {
-    const text = await btn.evaluate((el) => el.textContent.trim());
-    if (regex.test(text)) {
-      await btn.click();
-      return true;
-    }
-  }
-  return false;
-}
-
-// Set a numeric input in the leva debug panel, located by its row label.
-async function setLevaValue(page, label, value) {
-  const handle = await page.evaluateHandle((label) => {
-    const el = [...document.querySelectorAll("label")].find(
-      (l) => l.textContent.trim() === label,
-    );
-    if (!el) return null;
-    return el.htmlFor
-      ? document.getElementById(el.htmlFor)
-      : el.parentElement?.querySelector("input");
-  }, label);
-  const input = handle.asElement();
-  if (!input) throw new Error(`Debug panel input "${label}" not found`);
-  await input.click({ clickCount: 3 });
-  await input.type(String(value), { delay: 30 });
-  await input.press("Enter");
-}
-
 const opts = parseArgs(process.argv.slice(2));
 const [width, height] = opts.size.split("x").map(Number);
-const needsDebug =
+const debug =
   opts.level != null ||
   opts.mazeSeed != null ||
   opts.itemsSeed != null ||
   opts.actions.some((a) => a.type === "spawn");
 
-const browser = await puppeteer.launch({
-  headless: true,
-  args: ["--enable-webgl", "--use-gl=angle"],
+const { browser, page } = await launch({
+  url: opts.url,
+  lang: opts.lang,
+  quiz: opts.quiz,
+  debug,
+  test: opts.solve,
+  width,
+  height,
 });
 try {
-  const page = await browser.newPage();
-  await page.setViewport({ width, height });
-
-  await page.evaluateOnNewDocument(
-    (lang, quiz) => {
-      localStorage.setItem("amaze:lang", lang);
-      if (quiz) localStorage.setItem("amaze:ops", JSON.stringify([quiz]));
-    },
-    opts.lang,
-    opts.quiz ?? null,
-  );
-
-  const url = needsDebug ? `${opts.url}/#debug` : opts.url;
-  await page.goto(url, { waitUntil: "networkidle0" });
-  await sleep(1500);
-
   if (opts.settings) {
-    if (!(await clickButton(page, BUTTON_TEXT.settings)))
+    if (!(await clickButton(page, BUTTONS.settings)))
       throw new Error("Settings button not found");
     await sleep(500);
   } else if (opts.screen !== "title") {
-    if (!(await clickButton(page, BUTTON_TEXT.start)))
-      throw new Error("Start button not found");
-    await sleep(1500); // memorize screen (top-down countdown view)
+    await startGame(page);
 
     if (opts.screen === "playing" && opts.level == null) {
-      await page.keyboard.press("Space"); // skip countdown
-      await sleep(1500);
+      await skipCountdown(page);
     }
 
     if (opts.level != null) {
       // Jumping levels restarts the countdown, so skip it (again) afterwards
-      if (opts.screen === "playing") {
-        await page.keyboard.press("Space");
-        await sleep(1000);
-      }
+      if (opts.screen === "playing") await skipCountdown(page);
       await setLevaValue(page, "Level", opts.level);
       await sleep(2000);
-      if (opts.screen === "playing") {
-        await page.keyboard.press("Space");
-        await sleep(1500);
-      }
+      if (opts.screen === "playing") await skipCountdown(page);
     }
 
     if (opts.mazeSeed != null) {
@@ -190,11 +147,7 @@ try {
 
     for (const [i, action] of opts.actions.entries()) {
       if (action.type === "spawn") {
-        const label = { steps: "Steps Refill" }[action.item] ?? action.item;
-        const regex = new RegExp(`^${label}$`, "i");
-        if (!(await clickButton(page, regex)))
-          throw new Error(`Debug spawn button "${label}" not found`);
-        await sleep(300);
+        await spawnItem(page, action.item);
       } else {
         await page.keyboard.down(action.key);
         await sleep(action.ms);
@@ -203,20 +156,12 @@ try {
       }
     }
 
-    if (opts.quiz) {
-      if (!(await clickButton(page, BUTTON_TEXT.topView)))
-        throw new Error("Top-view button not found (is the game playing?)");
-      await sleep(800);
-    }
+    if (opts.quiz) await openMapQuiz(page);
+    if (opts.solve) await solveQuiz(page);
   }
 
   await sleep(opts.wait);
-  const shot = { path: opts.out };
-  if (opts.crop) {
-    const [x, y, w, h] = opts.crop.split(",").map(Number);
-    shot.clip = { x, y, width: w, height: h };
-  }
-  await page.screenshot(shot);
+  await screenshot(page, opts.out, opts.crop);
   console.log(`Screenshot saved to ${opts.out}`);
 } finally {
   await browser.close();
