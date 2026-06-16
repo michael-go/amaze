@@ -21,6 +21,7 @@ import { getLevelConfig } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
+import { ALL_TYPES } from "../lib/quiz";
 import { ITEM_COLORS } from "./MagicItem";
 import {
   playMagicPickup,
@@ -170,12 +171,15 @@ export default function App() {
   const [quizInfo, setQuizInfo] = useState(null); // { onSuccess, onCancel?, prompt? }
   const [maxSteps, setMaxSteps] = useState(0);
   const [stepsRemaining, setStepsRemaining] = useState(0);
+  // Everything is enabled by default; we persist only the types the user has
+  // explicitly turned off. New quiz types are therefore enabled automatically.
   const [enabledOps, setEnabledOps] = useState(() => {
+    let disabled = [];
     try {
-      const saved = JSON.parse(localStorage.getItem("amaze:ops"));
-      if (Array.isArray(saved) && saved.length > 0) return saved;
+      const saved = JSON.parse(localStorage.getItem("amaze:opsDisabled"));
+      if (Array.isArray(saved)) disabled = saved;
     } catch {}
-    return ["+", "-", "count", "missing", "pattern", "halfDouble", "clock"];
+    return ALL_TYPES.filter((t) => !disabled.includes(t));
   });
   const [magicItems, setMagicItems] = useState([]);
   const [activePower, setActivePower] = useState(null);
@@ -206,7 +210,8 @@ export default function App() {
 
   const saveOps = useCallback((ops) => {
     setEnabledOps(ops);
-    localStorage.setItem("amaze:ops", JSON.stringify(ops));
+    const disabled = ALL_TYPES.filter((t) => !ops.includes(t));
+    localStorage.setItem("amaze:opsDisabled", JSON.stringify(disabled));
   }, []);
 
   const beginLevel = useCallback((lvl, g) => {
