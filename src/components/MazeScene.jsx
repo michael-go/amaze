@@ -14,7 +14,13 @@ import {
 } from "../lib/maze";
 import { levelTheme } from "../lib/wallTexture";
 import { playWallBump } from "../lib/sounds";
-import { MazeFloor, MazeWalls, PlayerLight, StartMarker } from "./MazeElements";
+import {
+  MazeFloor,
+  MazeWalls,
+  WallDecals,
+  PlayerLight,
+  StartMarker,
+} from "./MazeElements";
 import KidCharacter from "./KidCharacter";
 import TreasureChest from "./TreasureChest";
 import MagicItem from "./MagicItem";
@@ -53,7 +59,9 @@ export default function MazeScene({
   burst,
   onBurstDone,
 }) {
-  const theme = levelTheme(level);
+  // Stable identity across re-renders (steps re-render the scene); otherwise
+  // the wall textures would regenerate every frame the player moves.
+  const theme = useMemo(() => levelTheme(level), [level]);
   const { camera } = useThree();
   const keys = useKeyboardControls();
 
@@ -395,7 +403,9 @@ export default function MazeScene({
         theme={theme}
         playerPos={playerPos}
         topView={topView}
+        game={game}
       />
+      <WallDecals wallBoxes={wallBoxes} game={game} />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       {magicItems &&
