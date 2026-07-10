@@ -356,9 +356,9 @@ export function MazeWalls({ wallBoxes, theme, playerPos, topView, game }) {
 }
 
 // Painted landmark icons on a sparse, deterministic subset of wall faces.
-const DECAL_RATE = 0.22; // candidate fraction of wall segments
-const DECAL_MIN_DIST = 16; // keep landmarks at least this far apart (world units)
-const DECAL_SIZE = 1.6;
+const DECAL_RATE = 0.3; // candidate fraction of wall segments
+const DECAL_MIN_DIST = 14; // keep landmarks at least this far apart (world units)
+const DECAL_SIZE = 1.7;
 
 function decalHash(x, z) {
   let h =
