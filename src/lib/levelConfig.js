@@ -34,8 +34,8 @@ export function getLevelConfig(level, rng) {
   // Step budget ratio: constant, ~45% of cells
   const stepBudgetRatio = 0.45;
 
-  // Magic items: scale with level
-  const magicItemCount = Math.min(2 + Math.floor(level / 2), 6);
+  // Magic items: scale with level — big mazes hold more magic
+  const magicItemCount = Math.min(2 + Math.floor(level / 2), 9);
 
   return {
     width: size,

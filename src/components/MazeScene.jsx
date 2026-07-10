@@ -32,9 +32,13 @@ const TURN_SPEED = 2.5;
 const PLAYER_RADIUS = 0.4;
 const EXIT_RADIUS = 1.2;
 const PICKUP_RADIUS = 1.0;
-const GHOST_DURATION = 5;
-const FLY_DURATION = 5;
 const FLY_HEIGHT = WALL_HEIGHT + 1.5;
+
+// Ghost/fly duration grows with the maze: 5s of flight barely crosses a few
+// cells of a late-game 25x25 maze. +0.4s per level, capped at 12s.
+export function powerDuration(level) {
+  return Math.min(12, 5 + level * 0.4);
+}
 
 // Third-person camera offset
 const CAM_BEHIND = 2.0;
@@ -190,7 +194,7 @@ export default function MazeScene({
     // so it pauses together with the game when frozen)
     if (activePower) {
       powerTimer.current += delta;
-      const duration = isGhost ? GHOST_DURATION : FLY_DURATION;
+      const duration = powerDuration(level);
       const secs = Math.max(0, Math.ceil(duration - powerTimer.current));
       if (onPowerTick && secs !== lastPowerSecs.current) {
         lastPowerSecs.current = secs;

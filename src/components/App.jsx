@@ -16,6 +16,8 @@ import {
   placeSingleItem,
   MAGIC_STEPS,
   MAGIC_TRAIL,
+  MAGIC_GHOST,
+  MAGIC_FLY,
 } from "../lib/maze";
 import { getLevelConfig } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
@@ -189,6 +191,8 @@ export default function App() {
   const [skippedItem, setSkippedItem] = useState(null);
   const playerInfoRef = useRef(null);
   const [stepsDepleted, setStepsDepleted] = useState(0);
+  const [stepsUsed, setStepsUsed] = useState(0);
+  const bonusSpawnsRef = useRef(0);
   const [burst, setBurst] = useState(null);
   const burstId = useRef(0);
   const winTimer = useRef(null);
@@ -245,6 +249,8 @@ export default function App() {
     setTrailActive(false);
     setSkippedItem(null);
     setStepsDepleted(0);
+    setStepsUsed(0);
+    bonusSpawnsRef.current = 0;
     levelStartRef.current = null;
     setWinStats(null);
     // Reset to Math.random for runtime spawns (step depletion bonus items)
@@ -349,7 +355,41 @@ export default function App() {
 
   const onStepUsed = useCallback(() => {
     setStepsRemaining((prev) => Math.max(0, prev - 1));
+    setStepsUsed((n) => n + 1);
   }, []);
+
+  // Advanced levels reward exploration: every ~30% of the step budget walked,
+  // a fresh magic item appears somewhere in the maze — long treks through big
+  // mazes keep turning up new magic instead of going dry.
+  useEffect(() => {
+    if (level < 5 || screen !== "playing" || maxSteps <= 0) return;
+    const interval = Math.max(40, Math.ceil(maxSteps * 0.3));
+    const milestone = Math.floor(stepsUsed / interval);
+    if (milestone <= bonusSpawnsRef.current || bonusSpawnsRef.current >= 8)
+      return;
+    bonusSpawnsRef.current = milestone;
+    const hasTrail =
+      trailActive || magicItems.some((it) => it.type === "trail");
+    const roll = Math.random();
+    // Mostly the fun movement powers; trail only if not already running
+    const type =
+      !hasTrail && roll < 0.15
+        ? MAGIC_TRAIL
+        : roll < 0.55
+          ? MAGIC_GHOST
+          : roll < 0.9
+            ? MAGIC_FLY
+            : MAGIC_STEPS;
+    const item = placeSingleItem(
+      game.cells,
+      magicItems,
+      type,
+      game.mask,
+      game.startCell,
+      game.exitCell,
+    );
+    if (item) setMagicItems((items) => [...items, item]);
+  }, [stepsUsed, level, screen, maxSteps, magicItems, trailActive, game]);
 
   const onPickupItem = useCallback(
     (item) => {
