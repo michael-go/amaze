@@ -186,9 +186,10 @@ export default function QuizModal({
   return (
     <div style={{ ...styles.backdrop, fontFamily: t.font }}>
       <div
+        className="glass"
         style={{
           ...styles.box,
-          animation: shake ? "shake 0.45s ease" : "none",
+          animation: shake ? "shake 0.45s ease" : "fade-up 0.3s ease both",
           fontFamily: t.font,
         }}
       >
@@ -208,16 +209,22 @@ export default function QuizModal({
             setWrong(false);
           }}
           onKeyDown={onKeyDown}
+          className="quiz-input"
           style={styles.input}
           placeholder=""
         />
         <div style={styles.buttons}>
-          <button style={styles.btn} onClick={submit}>
+          <button
+            className="btn btn-primary"
+            style={styles.btn}
+            onClick={submit}
+          >
             {t.check}
           </button>
           {onCancel && (
             <button
-              style={{ ...styles.btn, ...styles.cancelBtn }}
+              className="btn btn-ghost"
+              style={styles.btn}
               onClick={onCancel}
             >
               {t.cancel}
@@ -245,31 +252,33 @@ const styles = {
   backdrop: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.75)",
+    // The scene render loop pauses while a quiz is open, so this blur is a
+    // one-time composite, not a per-frame cost.
+    background: "rgba(4, 6, 14, 0.6)",
+    backdropFilter: "blur(7px)",
+    WebkitBackdropFilter: "blur(7px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 200,
   },
   box: {
-    background: "#111",
-    border: "2px solid #ff6b35",
-    borderRadius: 12,
-    padding: "36px 44px",
+    padding: "36px 48px",
     textAlign: "center",
     fontFamily: "inherit",
-    minWidth: 300,
+    minWidth: 320,
   },
   prompt: {
-    color: "#aaa",
+    color: "var(--text-dim)",
     fontSize: 16,
-    letterSpacing: 2,
+    fontWeight: 700,
+    letterSpacing: 1,
     marginBottom: 16,
   },
   question: {
     color: "#fff",
     fontSize: 52,
-    fontWeight: "bold",
+    fontWeight: 800,
     letterSpacing: 4,
     marginBottom: 12,
   },
@@ -293,23 +302,14 @@ const styles = {
     margin: "0 auto 12px",
   },
   wrong: {
-    color: "#ff4444",
+    color: "#ff6a6a",
     fontSize: 14,
+    fontWeight: 700,
     marginBottom: 8,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   input: {
-    fontSize: 36,
-    width: 120,
-    textAlign: "center",
-    background: "#222",
-    color: "#ff6b35",
-    border: "2px solid #444",
-    borderRadius: 6,
-    padding: "8px 0",
-    fontFamily: "inherit",
     marginBottom: 24,
-    outline: "none",
   },
   buttons: {
     display: "flex",
@@ -317,17 +317,8 @@ const styles = {
     justifyContent: "center",
   },
   btn: {
-    background: "#ff6b35",
-    color: "#fff",
-    border: "none",
-    padding: "10px 28px",
+    padding: "11px 28px",
     fontSize: 16,
     fontFamily: "inherit",
-    letterSpacing: 2,
-    cursor: "pointer",
-    borderRadius: 4,
-  },
-  cancelBtn: {
-    background: "#333",
   },
 };

@@ -464,7 +464,11 @@ export default function App() {
   );
 
   const langButton = (
-    <button style={styles.langBtn} onClick={toggleLang}>
+    <button
+      className="btn btn-ghost"
+      style={styles.langBtn}
+      onClick={toggleLang}
+    >
       {t.langToggle}
     </button>
   );
@@ -475,13 +479,13 @@ export default function App() {
     return (
       <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
         <TitleBackground />
-        <div style={styles.titleBox}>
-          <div style={{ marginBottom: 12 }}>
+        <div className="glass" style={styles.titleBox}>
+          <div style={{ marginBottom: 8 }}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 32 32"
-              width="64"
-              height="64"
+              width="56"
+              height="56"
             >
               <rect width="32" height="32" rx="4" fill="#1a1a2e" />
               <g
@@ -552,7 +556,7 @@ export default function App() {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 4,
-                marginTop: 14,
+                marginTop: 10,
               }}
             >
               <Key>T</Key>
@@ -566,7 +570,7 @@ export default function App() {
               color: "#ccc",
               fontSize: 17,
               fontFamily: font,
-              marginBottom: 28,
+              marginBottom: 22,
             }}
           >
             {t.instrExit}
@@ -581,18 +585,15 @@ export default function App() {
               }}
             >
               <button
-                style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
+                className="btn btn-primary"
+                style={{ fontFamily: font, fontSize: 19 }}
                 onClick={() => startLevel(savedLevel)}
               >
                 {t.continueFrom(savedLevel + 1)}
               </button>
               <button
-                style={{
-                  ...styles.btn,
-                  fontFamily: font,
-                  fontSize: 16,
-                  background: "#333",
-                }}
+                className="btn btn-ghost"
+                style={{ fontFamily: font, fontSize: 15 }}
                 onClick={startGame}
               >
                 {t.startFromBeginning}
@@ -600,7 +601,8 @@ export default function App() {
             </div>
           ) : (
             <button
-              style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
+              className="btn btn-primary"
+              style={{ fontFamily: font, fontSize: 19 }}
               onClick={startGame}
             >
               {t.startGame}
@@ -615,19 +617,29 @@ export default function App() {
               alignItems: "center",
             }}
           >
-            {langButton}
+            {/* Static variant: position:fixed would resolve against the
+                glass card (backdrop-filter makes it a containing block) */}
             <button
+              className="btn btn-ghost"
               style={{
-                ...styles.langBtn,
-                position: "static",
-                fontSize: 16,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
+                fontSize: 14,
+                padding: "8px 18px",
+                color: "var(--text-dim)",
+              }}
+              onClick={toggleLang}
+            >
+              {t.langToggle}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{
+                fontSize: 14,
+                padding: "8px 18px",
+                color: "var(--text-dim)",
               }}
               onClick={() => setShowSettings(true)}
             >
-              <span style={{ fontSize: 22 }}>&#9881;</span> {t.settings}
+              <span style={{ fontSize: 18 }}>&#9881;</span> {t.settings}
             </button>
           </div>
         </div>
@@ -661,7 +673,16 @@ export default function App() {
       }}
     >
       <Canvas
-        gl={{ antialias: true }}
+        shadows
+        // Cap resolution on high-DPI screens: 2-3x DPR with bloom is the
+        // single biggest GPU cost, and 1.5x is visually indistinguishable
+        // in a moving 3D scene (DOM UI stays crisp regardless).
+        dpr={[1, 1.5]}
+        // The EffectComposer does its own MSAA; context AA would be paid twice.
+        gl={{ antialias: false }}
+        // Stop redrawing entirely while a modal or the win screen covers the
+        // frozen scene — otherwise the GPU renders it flat-out at 60fps.
+        frameloop={quizInfo || screen === "won" ? "demand" : "always"}
         style={{ background: "#0a0a0a" }}
         camera={topView ? undefined : { fov: 75, near: 0.5, far: 200 }}
       >
@@ -746,24 +767,33 @@ export default function App() {
           }}
         >
           <div
-            style={{ ...styles.countdownText, fontFamily: font, fontSize: 32 }}
+            className="chip"
+            style={{ ...styles.countdownText, fontFamily: font }}
           >
             {t.memorize}
           </div>
-          <div style={styles.countdownNumber}>{countdown}</div>
-          <div style={styles.skipHint}>{t.tapToSkip}</div>
+          {/* key remounts the number each tick so the pop animation replays */}
+          <div key={countdown} className="chip" style={styles.countdownNumber}>
+            {countdown}
+          </div>
+          <div className="chip" style={styles.skipHint}>
+            {t.tapToSkip}
+          </div>
         </div>
       )}
 
       {screen === "won" && (
         <div style={{ ...styles.overlay, direction: t.dir, fontFamily: font }}>
           <Confetti />
-          <div style={styles.titleBox}>
+          <div className="glass" style={styles.titleBox}>
             <h1
               style={{
                 ...styles.title,
                 fontFamily: font,
-                color: "#00ff88",
+                background:
+                  "linear-gradient(135deg, #baffd9, #4ade80 55%, #16b364)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
                 fontSize: "clamp(28px, 6vw, 52px)",
               }}
             >
@@ -805,18 +835,15 @@ export default function App() {
               }}
             >
               <button
-                style={{ ...styles.btn, fontFamily: font, fontSize: 20 }}
+                className="btn btn-primary"
+                style={{ fontFamily: font, fontSize: 19 }}
                 onClick={nextLevel}
               >
                 {t.nextLevel}
               </button>
               <button
-                style={{
-                  ...styles.btn,
-                  fontFamily: font,
-                  fontSize: 20,
-                  background: "#333",
-                }}
+                className="btn btn-ghost"
+                style={{ fontFamily: font, fontSize: 19 }}
                 onClick={startGame}
               >
                 {t.restart}
@@ -827,7 +854,11 @@ export default function App() {
       )}
 
       {langButton}
-      <button style={styles.settingsBtn} onClick={() => setShowSettings(true)}>
+      <button
+        className="btn btn-ghost"
+        style={styles.settingsBtn}
+        onClick={() => setShowSettings(true)}
+      >
         &#9881;
       </button>
       <TouchControls />
@@ -904,13 +935,11 @@ function GitHubLink() {
     >
       {show && (
         <div
+          className="chip"
           style={{
             position: "absolute",
             bottom: 36,
             right: 0,
-            background: "#111",
-            border: "1px solid #555",
-            borderRadius: 6,
             padding: "8px 14px",
             whiteSpace: "nowrap",
           }}
@@ -920,9 +949,9 @@ function GitHubLink() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: "#4488cc",
+              color: "#7db4e8",
               fontSize: 13,
-              fontFamily: "Courier New, monospace",
+              fontWeight: 700,
             }}
           >
             github.com/michael-go/amaze
@@ -930,14 +959,12 @@ function GitHubLink() {
         </div>
       )}
       <button
+        className="chip"
         onClick={() => setShow((s) => !s)}
         style={{
-          background: "rgba(0,0,0,0.4)",
           color: "#888",
-          border: "1px solid #444",
           padding: "6px 8px",
           cursor: "pointer",
-          borderRadius: 4,
           display: "flex",
           alignItems: "center",
         }}
@@ -954,7 +981,8 @@ const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.85)",
+    background:
+      "radial-gradient(1200px 800px at 50% 32%, rgba(24, 28, 52, 0.82), rgba(4, 5, 11, 0.94))",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -962,32 +990,37 @@ const styles = {
   },
   titleBox: {
     textAlign: "center",
-    color: "#fff",
+    color: "var(--text)",
     maxWidth: 520,
-    padding: "40px 32px",
-    border: "1px solid #333",
-    borderRadius: 8,
-    background: "#111",
+    maxHeight: "94vh",
+    overflowY: "auto",
+    padding: "28px 44px",
+    animation: "fade-up 0.45s ease both",
   },
   title: {
-    fontSize: 64,
-    fontFamily: "Courier New, monospace",
-    letterSpacing: 12,
-    color: "#ff6b35",
+    fontSize: "clamp(40px, 7vw, 56px)",
+    fontWeight: 900,
+    letterSpacing: "0.16em",
+    paddingLeft: "0.16em", // recenter: letter-spacing adds trailing space
     marginBottom: 8,
+    background: "linear-gradient(135deg, #ffd9a0, #ff8a50 45%, #ff5c2e)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
   },
   subtitle: {
-    color: "#888",
+    color: "var(--text-dim)",
     fontSize: 16,
-    marginBottom: 24,
+    marginBottom: 18,
   },
   instructions: {
-    color: "#aaa",
+    color: "var(--text-dim)",
     fontSize: 14,
-    marginBottom: 32,
-    background: "#0a0a0a",
-    padding: "20px 28px",
-    borderRadius: 4,
+    marginBottom: 18,
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.07)",
+    padding: "14px 28px",
+    borderRadius: 16,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -999,15 +1032,13 @@ const styles = {
     minWidth: 36,
     height: 36,
     padding: "0 8px",
-    background: "#222",
-    border: "1px solid #555",
-    borderBottom: "3px solid #444",
-    borderRadius: 6,
-    color: "#fff",
-    fontSize: 18,
-    fontFamily: "sans-serif",
-    fontWeight: "bold",
-    boxShadow: "0 2px 0 #333",
+    background: "linear-gradient(180deg, #2e3348, #21253a)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: 9,
+    color: "var(--text)",
+    fontSize: 17,
+    fontWeight: 800,
+    boxShadow: "0 3px 0 rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1)",
   },
   countdownOverlay: {
     position: "fixed",
@@ -1020,50 +1051,44 @@ const styles = {
     zIndex: 50,
   },
   countdownText: {
-    color: "#fff",
-    fontFamily: "Courier New, monospace",
-    fontSize: 28,
-    letterSpacing: 4,
-    textShadow: "0 0 20px rgba(255,107,53,0.8)",
-    marginBottom: 16,
+    color: "var(--text)",
+    fontSize: "clamp(20px, 3.5vw, 30px)",
+    fontWeight: 800,
+    letterSpacing: 2,
+    padding: "10px 26px",
+    marginBottom: 18,
   },
   countdownNumber: {
-    color: "#ff6b35",
-    fontFamily: "Courier New, monospace",
-    fontSize: 96,
-    fontWeight: "bold",
-    textShadow: "0 0 40px rgba(255,107,53,0.6)",
+    // Dark disk behind the digit keeps it readable over the bright map
+    width: 132,
+    height: 132,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontSize: 76,
+    fontWeight: 900,
+    lineHeight: 1,
+    textShadow: "0 0 26px rgba(255,140,80,0.9)",
+    animation: "count-pop 0.45s ease both",
   },
   skipHint: {
-    color: "rgba(255,255,255,0.4)",
-    fontFamily: "Courier New, monospace",
-    fontSize: 14,
-    marginTop: 20,
-    letterSpacing: 2,
-  },
-  btn: {
-    background: "#ff6b35",
-    color: "#fff",
-    border: "none",
-    padding: "12px 32px",
-    fontSize: 18,
-    fontFamily: "Courier New, monospace",
-    letterSpacing: 2,
-    cursor: "pointer",
-    borderRadius: 4,
+    color: "var(--text-dim)",
+    fontSize: 13,
+    fontWeight: 700,
+    marginTop: 22,
+    letterSpacing: 1.5,
+    padding: "6px 16px",
   },
   settingsBtn: {
     position: "fixed",
     bottom: 80,
     left: 20,
-    background: "rgba(0,0,0,0.5)",
-    color: "#aaa",
-    border: "1px solid #555",
+    color: "var(--text-dim)",
     padding: "6px 14px",
-    fontFamily: "Courier New, monospace",
-    fontSize: 24,
-    cursor: "pointer",
-    borderRadius: 4,
+    fontSize: 22,
+    borderRadius: 12,
     zIndex: 200,
     pointerEvents: "all",
   },
@@ -1071,14 +1096,10 @@ const styles = {
     position: "fixed",
     bottom: 40,
     left: 20,
-    background: "rgba(0,0,0,0.5)",
-    color: "#aaa",
-    border: "1px solid #555",
-    padding: "6px 14px",
-    fontFamily: "Courier New, monospace",
+    color: "var(--text-dim)",
+    padding: "7px 14px",
     fontSize: 13,
-    cursor: "pointer",
-    borderRadius: 4,
+    borderRadius: 12,
     zIndex: 200,
     pointerEvents: "all",
   },

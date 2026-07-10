@@ -40,7 +40,7 @@ export default function SettingsModal({ enabledOps, onSave, onClose }) {
 
   return (
     <div style={styles.backdrop}>
-      <div style={{ ...styles.box, fontFamily: t.font }}>
+      <div className="glass" style={{ ...styles.box, fontFamily: t.font }}>
         <h2 style={styles.title}>{t.settings}</h2>
         <div style={styles.section}>
           <div style={styles.sectionLabel}>{t.mathOps}</div>
@@ -96,10 +96,18 @@ export default function SettingsModal({ enabledOps, onSave, onClose }) {
           </button>
         </div>
         <div style={styles.buttons}>
-          <button style={styles.saveBtn} onClick={save}>
+          <button
+            className="btn btn-primary"
+            style={styles.actionBtn}
+            onClick={save}
+          >
             {t.save}
           </button>
-          <button style={styles.cancelBtn} onClick={onClose}>
+          <button
+            className="btn btn-ghost"
+            style={styles.actionBtn}
+            onClick={onClose}
+          >
             {t.cancel}
           </button>
         </div>
@@ -112,24 +120,25 @@ const styles = {
   backdrop: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.75)",
+    background: "rgba(4, 6, 14, 0.6)",
+    backdropFilter: "blur(7px)",
+    WebkitBackdropFilter: "blur(7px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 300,
   },
   box: {
-    background: "#111",
-    border: "2px solid #555",
-    borderRadius: 12,
     padding: "32px 40px",
     textAlign: "center",
-    minWidth: 280,
+    minWidth: 300,
+    animation: "fade-up 0.3s ease both",
   },
   title: {
-    color: "#fff",
+    color: "var(--text)",
     fontSize: 24,
-    letterSpacing: 3,
+    fontWeight: 800,
+    letterSpacing: 2,
     marginBottom: 24,
     marginTop: 0,
   },
@@ -137,9 +146,10 @@ const styles = {
     marginBottom: 28,
   },
   sectionLabel: {
-    color: "#aaa",
-    fontSize: 14,
-    letterSpacing: 2,
+    color: "var(--text-dim)",
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: 1.5,
     marginBottom: 12,
   },
   opsRow: {
@@ -151,13 +161,14 @@ const styles = {
     width: 52,
     height: 52,
     fontSize: 24,
-    fontWeight: "bold",
-    background: "#222",
-    color: "#666",
-    border: "2px solid #333",
-    borderRadius: 8,
+    fontWeight: 800,
+    background: "rgba(255,255,255,0.06)",
+    color: "rgba(233,237,247,0.4)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 14,
     cursor: "pointer",
     fontFamily: "inherit",
+    transition: "background 0.15s ease, color 0.15s ease",
   },
   typesGrid: {
     display: "flex",
@@ -167,47 +178,32 @@ const styles = {
     maxWidth: 340,
   },
   typeBtn: {
-    height: 36,
-    padding: "0 12px",
+    height: 38,
+    padding: "0 14px",
     fontSize: 13,
-    fontWeight: "bold",
-    background: "#222",
-    color: "#666",
-    border: "2px solid #333",
-    borderRadius: 8,
+    fontWeight: 700,
+    background: "rgba(255,255,255,0.06)",
+    color: "rgba(233,237,247,0.4)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: "inherit",
+    transition: "background 0.15s ease, color 0.15s ease",
   },
   opBtnActive: {
-    background: "#ff6b35",
+    background: "var(--accent-grad)",
     color: "#fff",
-    border: "2px solid #ff6b35",
+    border: "1px solid rgba(255,255,255,0.25)",
+    boxShadow: "0 4px 14px rgba(255,92,40,0.35)",
   },
   buttons: {
     display: "flex",
     gap: 12,
     justifyContent: "center",
   },
-  saveBtn: {
-    background: "#ff6b35",
-    color: "#fff",
-    border: "none",
-    padding: "10px 28px",
+  actionBtn: {
+    padding: "11px 28px",
     fontSize: 16,
     fontFamily: "inherit",
-    letterSpacing: 2,
-    cursor: "pointer",
-    borderRadius: 4,
-  },
-  cancelBtn: {
-    background: "#333",
-    color: "#fff",
-    border: "none",
-    padding: "10px 28px",
-    fontSize: 16,
-    fontFamily: "inherit",
-    letterSpacing: 2,
-    cursor: "pointer",
-    borderRadius: 4,
   },
 };

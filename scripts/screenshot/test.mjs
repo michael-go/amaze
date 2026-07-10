@@ -98,18 +98,22 @@ async function testSettings() {
     );
     await clickButton(page, BUTTONS.save);
     await sleep(500);
-    const saved = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem("amaze:ops")),
+    const disabled = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("amaze:opsDisabled")),
     );
-    check(saved.includes("money"), "toggled type saved to localStorage");
-    check(saved.includes("+"), "previously enabled kinds preserved");
+    check(disabled.includes("money"), "toggled-off type saved to localStorage");
+    check(!disabled.includes("+"), "still-enabled kinds not disabled");
     console.log("  ✓ settings toggle persists");
   } finally {
     await browser.close();
   }
 }
 
-const SCENARIOS = { quiz: testQuizKinds, pickup: testPickup, settings: testSettings };
+const SCENARIOS = {
+  quiz: testQuizKinds,
+  pickup: testPickup,
+  settings: testSettings,
+};
 const requested = process.argv.slice(2);
 const names = requested.length ? requested : Object.keys(SCENARIOS);
 
@@ -117,7 +121,9 @@ let failed = 0;
 for (const name of names) {
   const fn = SCENARIOS[name];
   if (!fn) {
-    console.error(`Unknown scenario: ${name} (have: ${Object.keys(SCENARIOS).join(", ")})`);
+    console.error(
+      `Unknown scenario: ${name} (have: ${Object.keys(SCENARIOS).join(", ")})`,
+    );
     process.exit(1);
   }
   console.log(`▶ ${name}`);

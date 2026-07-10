@@ -43,11 +43,11 @@ export const LEVEL_THEMES = [
     fogDensity: 0.04,
   }, // 3: volcanic
   {
-    wall: "#3a3a6a",
+    wall: "#4c4c84",
     rough: 0.3,
     metal: 0.7,
     emissive: "#000010",
-    floor: "#2e2e48",
+    floor: "#3a3a5c",
     pattern: "metal",
     fog: "#222238",
     fogDensity: 0.022,
@@ -429,6 +429,449 @@ function buildRoughnessMap(srcCanvas, baseRough) {
   }
   octx.putImageData(img, 0, 0);
   return finalizeTex(out, 4);
+}
+
+// Broad, toroidally-wrapped color variation: bleached lighter patches and
+// damp darker ones with a slight hue drift, so large surfaces don't read as
+// one flat tint.
+function addColorVariation(ctx, S, rand, baseColor) {
+  const hsl = {};
+  baseColor.getHSL(hsl);
+  for (let n = 0; n < 7; n++) {
+    const light = rand() < 0.5;
+    const c = new THREE.Color().setHSL(
+      (hsl.h + (rand() - 0.5) * 0.06 + 1) % 1,
+      Math.max(0, Math.min(1, hsl.s * (0.8 + rand() * 0.4))),
+      Math.max(0.05, Math.min(0.9, hsl.l * (light ? 1.35 : 0.7))),
+    );
+    const x = rand() * S,
+      y = rand() * S,
+      r = 70 + rand() * 120,
+      a = 0.1 + rand() * 0.1;
+    const col = `${~~(c.r * 255)},${~~(c.g * 255)},${~~(c.b * 255)}`;
+    for (const ox of [0, -S, S]) {
+      for (const oy of [0, -S, S]) {
+        const g = ctx.createRadialGradient(
+          x + ox,
+          y + oy,
+          0,
+          x + ox,
+          y + oy,
+          r,
+        );
+        g.addColorStop(0, `rgba(${col},${a})`);
+        g.addColorStop(1, `rgba(${col},0)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+      }
+    }
+  }
+}
+
+// ─── Floor patterns ──────────────────────────────────────────────────────
+// One floor texture tile spans one maze cell, so every pattern must wrap
+// toroidally: features that cross a tile edge are redrawn at ±S offsets and
+// jittered grids still sum exactly to S — no cut-off slabs at cell seams.
+
+function drawWrapped(ctx, S, draw) {
+  for (const ox of [-S, 0, S]) {
+    for (const oy of [-S, 0, S]) {
+      ctx.save();
+      ctx.translate(ox, oy);
+      draw();
+      ctx.restore();
+    }
+  }
+}
+
+// Split S into n segments with jittered cuts that still sum exactly to S,
+// so slab grids always meet the tile edge on a joint, never mid-slab.
+function partition(S, n, jitter, rand) {
+  const cuts = [0];
+  for (let i = 1; i < n; i++) {
+    cuts.push(Math.round((i + (rand() - 0.5) * jitter) * (S / n)));
+  }
+  cuts.push(S);
+  return cuts.slice(1).map((c, i) => c - cuts[i]);
+}
+
+function bevelSlab(ctx, tint, x, y, w, h, v, m = 3) {
+  ctx.fillStyle = tint(v);
+  ctx.fillRect(x + m, y + m, w - 2 * m, h - 2 * m);
+  ctx.fillStyle = tint(v * 1.2);
+  ctx.fillRect(x + m, y + m, w - 2 * m, 2);
+  ctx.fillRect(x + m, y + m, 2, h - 2 * m);
+  ctx.fillStyle = tint(v * 0.62);
+  ctx.fillRect(x + m, y + h - m - 2, w - 2 * m, 2);
+  ctx.fillRect(x + w - m - 2, y + m, 2, h - 2 * m);
+}
+
+// Draw a wrapped polyline (for veins, cracks, grain).
+function wrappedStroke(ctx, S, pts, style, width, alpha = 1) {
+  drawWrapped(ctx, S, () => {
+    ctx.strokeStyle = style;
+    ctx.lineWidth = width;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    pts.forEach((p, i) =>
+      i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]),
+    );
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+}
+
+function meander(S, rand, steps, stride) {
+  const pts = [];
+  let x = rand() * S,
+    y = rand() * S,
+    a = rand() * Math.PI * 2;
+  pts.push([x, y]);
+  for (let s = 0; s < steps; s++) {
+    x += Math.cos(a) * (stride + rand() * stride);
+    y += Math.sin(a) * (stride + rand() * stride);
+    a += (rand() - 0.5) * 1.3;
+    pts.push([x, y]);
+  }
+  return pts;
+}
+
+function drawFlagstone(ctx, S, tint, tintA, rand, mossy) {
+  ctx.fillStyle = tint(0.5);
+  ctx.fillRect(0, 0, S, S);
+  let y = 0;
+  for (const bh of partition(S, 4, 0.5, rand)) {
+    const shift = ~~(rand() * S); // random phase per row, wraps exactly
+    let x = 0;
+    for (const bw of partition(S, 4, 0.7, rand)) {
+      const sx = (x + shift) % S;
+      const yy = y;
+      const v = 0.8 + rand() * 0.32;
+      drawWrapped(ctx, S, () => bevelSlab(ctx, tint, sx, yy, bw, bh, v));
+      if (mossy && rand() < 0.4) {
+        const mx = sx + bw * (0.2 + rand() * 0.5);
+        const my = yy + bh * (0.2 + rand() * 0.5);
+        const mr = 14 + rand() * 26;
+        const green = ~~(95 + rand() * 70);
+        drawWrapped(ctx, S, () => {
+          const g = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+          g.addColorStop(0, `rgba(52,${green},55,0.45)`);
+          g.addColorStop(1, "rgba(52,120,55,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+        });
+      }
+      x += bw;
+    }
+    y += bh;
+  }
+}
+
+function drawPavers(ctx, S, tint, rand) {
+  ctx.fillStyle = tint(0.5);
+  ctx.fillRect(0, 0, S, S);
+  const bw = 128,
+    bh = 64;
+  for (let row = 0; row < S / bh; row++) {
+    const off = (row % 2) * (bw / 2);
+    for (let col = 0; col < S / bw; col++) {
+      const x = col * bw + off,
+        y = row * bh;
+      const v = 0.8 + rand() * 0.3;
+      drawWrapped(ctx, S, () => bevelSlab(ctx, tint, x, y, bw, bh, v));
+    }
+  }
+}
+
+function drawCobbleFloor(ctx, S, tint, rand) {
+  ctx.fillStyle = tint(0.4);
+  ctx.fillRect(0, 0, S, S);
+  const gs = 64;
+  for (let gy = 0; gy < S / gs; gy++) {
+    for (let gx = 0; gx < S / gs; gx++) {
+      const cx = gx * gs + gs / 2 + (gy % 2) * (gs / 2) + (rand() - 0.5) * 12;
+      const cy = gy * gs + gs / 2 + (rand() - 0.5) * 12;
+      const rx = gs * 0.42 + rand() * 6,
+        ry = gs * 0.38 + rand() * 6;
+      const rot = (rand() - 0.5) * 0.7;
+      const v = 0.72 + rand() * 0.34;
+      drawWrapped(ctx, S, () => {
+        ctx.fillStyle = tint(v);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = tint(v * 1.3);
+        ctx.beginPath();
+        ctx.ellipse(
+          cx - rx * 0.22,
+          cy - ry * 0.3,
+          rx * 0.45,
+          ry * 0.38,
+          rot,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      });
+    }
+  }
+}
+
+function drawBasalt(ctx, S, tint, rand) {
+  ctx.fillStyle = tint(0.45);
+  ctx.fillRect(0, 0, S, S);
+  let y = 0;
+  for (const bh of partition(S, 5, 0.4, rand)) {
+    const shift = ~~(rand() * S);
+    let x = 0;
+    for (const bw of partition(S, 5, 0.5, rand)) {
+      const sx = (x + shift) % S;
+      const yy = y;
+      const v = 0.66 + rand() * 0.24;
+      drawWrapped(ctx, S, () => bevelSlab(ctx, tint, sx, yy, bw, bh, v, 2));
+      x += bw;
+    }
+    y += bh;
+  }
+  for (let n = 0; n < 8; n++) {
+    const col = `rgba(255,${~~(90 + rand() * 70)},0,0.8)`;
+    wrappedStroke(ctx, S, meander(S, rand, 5, 16), col, 2);
+  }
+}
+
+function drawPlate(ctx, S, tint, rand) {
+  const ps = 128;
+  ctx.fillStyle = tint(0.65);
+  ctx.fillRect(0, 0, S, S);
+  for (let py = 0; py < S / ps; py++) {
+    for (let px = 0; px < S / ps; px++) {
+      const x = px * ps,
+        y = py * ps;
+      const v = 1.0 + ((px + py) % 2) * 0.16 + rand() * 0.06;
+      bevelSlab(ctx, tint, x, y, ps, ps, v);
+      for (const [rx, ry] of [
+        [x + 14, y + 14],
+        [x + ps - 14, y + 14],
+        [x + 14, y + ps - 14],
+        [x + ps - 14, y + ps - 14],
+      ]) {
+        ctx.fillStyle = tint(v * 1.5);
+        ctx.beginPath();
+        ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = tint(v * 0.6);
+        ctx.beginPath();
+        ctx.arc(rx + 1.5, ry + 1.5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawSmooth(ctx, S, tint, tintA, rand, icy) {
+  ctx.fillStyle = tint(1.05);
+  ctx.fillRect(0, 0, S, S);
+  for (let n = 0; n < 7; n++) {
+    const x = rand() * S,
+      y = rand() * S,
+      r = 60 + rand() * 110;
+    const col = tintA(rand() < 0.5 ? 1.2 : 0.85, 0.4);
+    const colEnd = tintA(1, 0);
+    drawWrapped(ctx, S, () => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, col);
+      g.addColorStop(1, colEnd);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    });
+  }
+  const veins = icy ? 14 : 9;
+  for (let n = 0; n < veins; n++) {
+    wrappedStroke(
+      ctx,
+      S,
+      meander(S, rand, 5, 14),
+      tint(1.6),
+      icy ? 1.8 : 1.2,
+      0.7,
+    );
+  }
+}
+
+function drawPlanks(ctx, S, tint, rand) {
+  const pw = 64;
+  for (let p = 0; p < S / pw; p++) {
+    const x = p * pw;
+    const v = 0.82 + rand() * 0.24;
+    ctx.fillStyle = tint(v);
+    ctx.fillRect(x, 0, pw, S);
+    ctx.fillStyle = tint(0.45);
+    ctx.fillRect(x, 0, 3, S);
+    ctx.fillStyle = tint(v * 1.15);
+    ctx.fillRect(x + 3, 0, 2, S);
+    // Butt joints 256 apart wrap exactly (512 % 256 == 0)
+    const jy = ~~(rand() * 248);
+    for (const yy of [jy, jy + 256]) {
+      ctx.fillStyle = tint(0.45);
+      ctx.fillRect(x, yy, pw, 3);
+      ctx.fillStyle = tint(v * 1.15);
+      ctx.fillRect(x, yy + 3, pw, 2);
+    }
+    // Grain wobbles on whole sine cycles so it meets itself across the seam
+    ctx.strokeStyle = tint(v * 0.78);
+    ctx.lineWidth = 1;
+    for (let gl = 0; gl < 4; gl++) {
+      const gx = x + 10 + rand() * (pw - 20);
+      const amp = 1.5 + rand() * 2;
+      const cycles = 1 + ~~(rand() * 3);
+      const phase = rand() * Math.PI * 2;
+      ctx.beginPath();
+      for (let yy = 0; yy <= S; yy += 8) {
+        const wob = Math.sin((yy / S) * Math.PI * 2 * cycles + phase) * amp;
+        yy === 0 ? ctx.moveTo(gx + wob, yy) : ctx.lineTo(gx + wob, yy);
+      }
+      ctx.stroke();
+    }
+  }
+}
+
+function drawMarbleFloor(ctx, S, tint, tintA, rand) {
+  ctx.fillStyle = tint(1.08);
+  ctx.fillRect(0, 0, S, S);
+  for (let n = 0; n < 6; n++) {
+    const x = rand() * S,
+      y = rand() * S,
+      r = 80 + rand() * 120;
+    const col = tintA(1.18, 0.5),
+      colEnd = tintA(1.18, 0);
+    drawWrapped(ctx, S, () => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, col);
+      g.addColorStop(1, colEnd);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    });
+  }
+  for (let n = 0; n < 9; n++) {
+    const dark = rand() < 0.6;
+    wrappedStroke(
+      ctx,
+      S,
+      meander(S, rand, 12, 18),
+      tint(dark ? 0.55 : 1.35),
+      dark ? 1.6 : 1,
+      0.45,
+    );
+  }
+  // 2×2 polished tiles per cell
+  ctx.strokeStyle = tint(0.6);
+  ctx.globalAlpha = 0.7;
+  ctx.lineWidth = 3;
+  for (const c of [0, 256]) {
+    ctx.beginPath();
+    ctx.moveTo(c, 0);
+    ctx.lineTo(c, S);
+    ctx.moveTo(0, c);
+    ctx.lineTo(S, c);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawChecker(ctx, S, tint, rand) {
+  const ts = 64,
+    g = 4;
+  ctx.fillStyle = tint(0.45);
+  ctx.fillRect(0, 0, S, S);
+  for (let ty = 0; ty < S / ts; ty++) {
+    for (let tx = 0; tx < S / ts; tx++) {
+      const x = tx * ts,
+        y = ty * ts;
+      const v = ((tx + ty) % 2 ? 0.72 : 1.0) + rand() * 0.12;
+      ctx.fillStyle = tint(v);
+      ctx.fillRect(x + g / 2, y + g / 2, ts - g, ts - g);
+      ctx.fillStyle = tint(v * 1.25);
+      ctx.fillRect(x + g / 2, y + g / 2, ts - g, 3);
+      ctx.fillStyle = tint(v * 0.7);
+      ctx.fillRect(x + g / 2, y + ts - g / 2 - 3, ts - g, 3);
+    }
+  }
+}
+
+const FLOOR_STYLE = {
+  stone: "flagstone",
+  mossy: "flagstone",
+  runes: "flagstone",
+  brick: "pavers",
+  cobble: "cobble",
+  crack: "basalt",
+  metal: "plate",
+  hex: "plate",
+  crystal: "smooth",
+  ice: "smooth",
+  wood: "planks",
+  marble: "marble",
+  tile: "checker",
+};
+
+const FLOOR_PARAMS = {
+  flagstone: { normal: 3.0, rough: 0.85, metal: 0 },
+  pavers: { normal: 3.0, rough: 0.85, metal: 0 },
+  cobble: { normal: 3.4, rough: 0.9, metal: 0 },
+  basalt: { normal: 2.8, rough: 0.8, metal: 0 },
+  plate: { normal: 2.2, rough: 0.5, metal: 0.35 },
+  smooth: { normal: 1.2, rough: 0.4, metal: 0.1 },
+  planks: { normal: 2.0, rough: 0.8, metal: 0 },
+  marble: { normal: 0.9, rough: 0.4, metal: 0 },
+  checker: { normal: 2.0, rough: 0.5, metal: 0 },
+};
+
+// PBR map set for the floor, themed by the wall pattern's matching floor
+// style and tinted with the theme's floor color. One texture tile spans one
+// maze cell (CELL_SIZE world units). Returns { map, normalMap, roughnessMap,
+// metalness }.
+export function createFloorMaps(theme) {
+  const S = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = S;
+  const ctx = canvas.getContext("2d");
+  const rand = seededRand(
+    theme.floor.charCodeAt(1) * 883 +
+      theme.floor.charCodeAt(3) * 57 +
+      (theme.pattern?.charCodeAt(0) ?? 0) * 131,
+  );
+  const base = new THREE.Color(theme.floor);
+  const rgb = (f) =>
+    `${clamp255(~~(base.r * 255 * f))},${clamp255(~~(base.g * 255 * f))},${clamp255(~~(base.b * 255 * f))}`;
+  const tint = (f) => `rgb(${rgb(f)})`;
+  const tintA = (f, a) => `rgba(${rgb(f)},${a})`;
+
+  const style = FLOOR_STYLE[theme.pattern] ?? "flagstone";
+  if (style === "flagstone")
+    drawFlagstone(ctx, S, tint, tintA, rand, theme.pattern === "mossy");
+  else if (style === "pavers") drawPavers(ctx, S, tint, rand);
+  else if (style === "cobble") drawCobbleFloor(ctx, S, tint, rand);
+  else if (style === "basalt") drawBasalt(ctx, S, tint, rand);
+  else if (style === "plate") drawPlate(ctx, S, tint, rand);
+  else if (style === "smooth")
+    drawSmooth(ctx, S, tint, tintA, rand, theme.pattern === "ice");
+  else if (style === "planks") drawPlanks(ctx, S, tint, rand);
+  else if (style === "marble") drawMarbleFloor(ctx, S, tint, tintA, rand);
+  else if (style === "checker") drawChecker(ctx, S, tint, rand);
+
+  addColorVariation(ctx, S, rand, base);
+  addStains(ctx, S, rand);
+  addGrain(ctx, S, rand, style === "marble" || style === "smooth" ? 8 : 14);
+
+  const p = FLOOR_PARAMS[style];
+  const map = finalizeTex(canvas);
+  const half = downscale(canvas, S / 2);
+  return {
+    map,
+    normalMap: buildNormalMap(half, p.normal),
+    roughnessMap: buildRoughnessMap(half, p.rough),
+    metalness: p.metal,
+  };
 }
 
 // Generate the full PBR map set (albedo, normal, roughness) for a theme and an
@@ -832,8 +1275,10 @@ export function createWallMaps(theme, variant = {}) {
     }
   }
 
-  // Shared weathering: low-frequency stains then fine grain. Both add the
-  // surface irregularity that reads as "real" and feed the normal map.
+  // Shared weathering: broad color drift, low-frequency stains, then fine
+  // grain. All three add the surface irregularity that reads as "real" and
+  // feed the normal map.
+  addColorVariation(ctx, S, rand, base);
   addStains(ctx, S, rand);
   addGrain(ctx, S, rand, 16);
 

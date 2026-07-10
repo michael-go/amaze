@@ -2,7 +2,7 @@ import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "../lib/useKeyboardControls";
 import * as THREE from "three";
-import { Sky, Stars } from "@react-three/drei";
+import { Stars } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import {
   getWallBoxes,
@@ -19,6 +19,7 @@ import {
   MazeWalls,
   WallDecals,
   PlayerLight,
+  KeyLight,
   StartMarker,
 } from "./MazeElements";
 import KidCharacter from "./KidCharacter";
@@ -147,7 +148,15 @@ export default function MazeScene({
     // through a wall or overshoot the camera lerps
     delta = Math.min(delta, 0.05);
     const pos = playerPos.current;
-    if (playerInfoRef) playerInfoRef.current = { pos, yaw: yaw.current };
+    if (playerInfoRef) {
+      // Mutate in place — allocating a fresh object every frame adds GC churn
+      if (playerInfoRef.current) {
+        playerInfoRef.current.pos = pos;
+        playerInfoRef.current.yaw = yaw.current;
+      } else {
+        playerInfoRef.current = { pos, yaw: yaw.current };
+      }
+    }
     const isGhost = activePower === MAGIC_GHOST;
     const isFlying = activePower === MAGIC_FLY;
 
@@ -221,22 +230,19 @@ export default function MazeScene({
       if (keys.turnLeft) yaw.current += TURN_SPEED * delta;
       if (keys.turnRight) yaw.current -= TURN_SPEED * delta;
 
-      // Forward/backward movement
-      const forward = new THREE.Vector3(
-        -Math.sin(yaw.current),
-        0,
-        -Math.cos(yaw.current),
-      );
+      // Forward/backward movement (plain scalars — no per-frame allocation)
+      const fx = -Math.sin(yaw.current);
+      const fz = -Math.cos(yaw.current);
 
       let dx = 0,
         dz = 0;
       if (keys.forward) {
-        dx += forward.x;
-        dz += forward.z;
+        dx += fx;
+        dz += fz;
       }
       if (keys.backward) {
-        dx -= forward.x;
-        dz -= forward.z;
+        dx -= fx;
+        dz -= fz;
       }
 
       const len = Math.sqrt(dx * dx + dz * dz);
@@ -374,9 +380,12 @@ export default function MazeScene({
       {!topView && (
         <fogExp2 attach="fog" args={[theme.fog, theme.fogDensity]} />
       )}
-      <ambientLight intensity={topView ? 2.0 : 1.0} />
-      <hemisphereLight args={["#8888aa", "#444466", 0.6]} />
+      {/* First-person: dim ambient + cool shadow-casting key + warm player
+          torch. Top view keeps flat bright lighting for map readability. */}
+      <ambientLight intensity={topView ? 2.0 : 0.55} />
+      <hemisphereLight args={["#8890b8", "#3e3e58", 0.65]} />
       {!topView && <PlayerLight playerPos={playerPos} />}
+      {!topView && <KeyLight playerPos={playerPos} />}
       {topView && (
         <directionalLight
           position={[
@@ -388,14 +397,7 @@ export default function MazeScene({
         />
       )}
 
-      <Sky
-        sunPosition={[100, -5, 100]}
-        turbidity={8}
-        rayleigh={0.5}
-        mieCoefficient={0.005}
-        mieDirectionalG={0.8}
-      />
-      <Stars radius={100} depth={50} count={3000} factor={4} fade speed={1} />
+      <NightSky game={game} theme={theme} />
 
       <MazeFloor game={game} theme={theme} />
       <MazeWalls
@@ -427,7 +429,9 @@ export default function MazeScene({
         <PickupBurst key={burst.id} burst={burst} onDone={onBurstDone} />
       )}
 
-      <EffectComposer multisampling={4}>
+      {/* 2x MSAA is plenty here and half the price of 4x (the composer is
+          the only AA pass — the GL context itself runs with antialias off) */}
+      <EffectComposer multisampling={2}>
         <Bloom
           mipmapBlur
           intensity={0.8}
@@ -438,6 +442,105 @@ export default function MazeScene({
         {!topView && <Vignette offset={0.25} darkness={0.6} />}
       </EffectComposer>
     </>
+  );
+}
+
+// Night sky: gradient dome with the horizon glow tinted by the theme's fog
+// color (so world and sky belong together), a moon that matches the scene's
+// moonlight key, and a star field. Cheaper than the old atmosphere-scattering
+// Sky shader — the dome is a single textured mesh.
+function NightSky({ game, theme }) {
+  const cx = (game.width * CELL_SIZE) / 2;
+  const cz = (game.height * CELL_SIZE) / 2;
+
+  const domeTex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 4;
+    c.height = 256;
+    const ctx = c.getContext("2d");
+    const fog = new THREE.Color(theme.fog);
+    const horizon = fog.clone().lerp(new THREE.Color("#5a6a9e"), 0.4);
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    // Canvas top = dome zenith; the glow band sits just above the horizon
+    g.addColorStop(0, "#04050c");
+    g.addColorStop(0.38, "#0b0f24");
+    g.addColorStop(0.5, `#${horizon.getHexString()}`);
+    g.addColorStop(0.58, `#${fog.clone().multiplyScalar(0.5).getHexString()}`);
+    g.addColorStop(1, "#03040a");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 4, 256);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [theme]);
+
+  const moonTex = useMemo(() => {
+    const S = 128;
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const ctx = c.getContext("2d");
+    // Soft halo
+    const halo = ctx.createRadialGradient(64, 64, 20, 64, 64, 64);
+    halo.addColorStop(0, "rgba(230,238,255,0.55)");
+    halo.addColorStop(1, "rgba(230,238,255,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, S, S);
+    // Disc with a hint of shading
+    const disc = ctx.createRadialGradient(56, 56, 4, 64, 64, 26);
+    disc.addColorStop(0, "#fdfdf6");
+    disc.addColorStop(0.8, "#e8ecf5");
+    disc.addColorStop(1, "#c9d2e8");
+    ctx.fillStyle = disc;
+    ctx.beginPath();
+    ctx.arc(64, 64, 26, 0, Math.PI * 2);
+    ctx.fill();
+    // A few craters
+    ctx.fillStyle = "rgba(170,180,205,0.5)";
+    for (const [x, y, r] of [
+      [56, 58, 5],
+      [72, 70, 4],
+      [64, 50, 3],
+      [52, 74, 3],
+    ]) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  useEffect(
+    () => () => {
+      domeTex.dispose();
+      moonTex.dispose();
+    },
+    [domeTex, moonTex],
+  );
+
+  return (
+    <group position={[cx, 0, cz]}>
+      <mesh>
+        <sphereGeometry args={[170, 32, 24]} />
+        <meshBasicMaterial
+          map={domeTex}
+          side={THREE.BackSide}
+          fog={false}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Moon sits in the same sky quadrant the shadow key light comes from */}
+      <sprite position={[55, 85, 65]} scale={[30, 30, 1]}>
+        <spriteMaterial
+          map={moonTex}
+          fog={false}
+          depthWrite={false}
+          transparent
+        />
+      </sprite>
+      <Stars radius={100} depth={50} count={2500} factor={5} fade speed={0.6} />
+    </group>
   );
 }
 

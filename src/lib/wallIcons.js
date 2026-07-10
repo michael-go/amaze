@@ -308,20 +308,31 @@ export function createIconTexture(kind) {
   const ctx = canvas.getContext("2d");
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
+  // Painted plaque backing so the motif pops against any masonry: a soft
+  // dark disc with a pale hand-painted ring.
+  ctx.fillStyle = "rgba(22,17,11,0.4)";
+  ctx.beginPath();
+  ctx.arc(C, C, 118, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(243,233,210,0.75)";
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.arc(C, C, 108, 0, TAU);
+  ctx.stroke();
   (DRAW[kind] || DRAW.star)(ctx);
-  // Weather the paint heavily so it reads as a faint, worn-into-the-wall
-  // marking: a strong desaturating wash, then lots of eroded patches.
+  // Weather the paint lightly — chalky wash plus a few eroded patches — so
+  // it reads as an old painting that is still clearly legible.
   const rnd = mulberry(kindSeed(kind));
   ctx.globalCompositeOperation = "source-atop";
-  ctx.fillStyle = "rgba(226,224,216,0.5)";
+  ctx.fillStyle = "rgba(226,224,216,0.22)";
   ctx.fillRect(0, 0, S, S);
   ctx.globalCompositeOperation = "destination-out";
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 14; i++) {
     const x = rnd() * S,
       y = rnd() * S,
-      r = 9 + rnd() * 38;
+      r = 7 + rnd() * 26;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(0,0,0,${0.35 + rnd() * 0.5})`);
+    g.addColorStop(0, `rgba(0,0,0,${0.25 + rnd() * 0.35})`);
     g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, 2 * r, 2 * r);

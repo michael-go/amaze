@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
@@ -127,6 +127,14 @@ export default function KidCharacter({
 
   const isGhost = activePower === "ghost";
   const isFlying = activePower === "fly";
+
+  // All the solid body parts cast shadows (the transparent aura must not —
+  // it would throw a solid blob). Re-run when the aura mounts/unmounts.
+  useEffect(() => {
+    groupRef.current?.traverse((o) => {
+      if (o.isMesh && !o.material?.transparent) o.castShadow = true;
+    });
+  }, [isGhost, isFlying]);
 
   const playFootstep = () => {
     if (isMuted()) return;

@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS } from "../lib/maze";
@@ -15,6 +15,13 @@ export default function MagicItem({ item }) {
   const glowRef = useRef();
 
   const { color, emissive } = ITEM_COLORS[item.type] || ITEM_COLORS.ghost;
+
+  // Solid parts drop a small bobbing shadow that grounds the floating item
+  useEffect(() => {
+    groupRef.current?.traverse((o) => {
+      if (o.isMesh && !o.material?.transparent) o.castShadow = true;
+    });
+  }, []);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;

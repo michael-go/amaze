@@ -1,6 +1,11 @@
 // Shared helpers for driving the game in a headless browser.
 // Used by screenshot.mjs (visual iteration) and test.mjs (e2e tests).
 import puppeteer from "puppeteer";
+import { ALL_TYPES } from "../../src/lib/quiz.js";
+
+// The app persists the quiz types the user turned OFF ("amaze:opsDisabled");
+// everything else is enabled. Forcing kinds therefore means disabling the rest.
+const disabledFor = (kinds) => ALL_TYPES.filter((t) => !kinds.includes(t));
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -32,13 +37,15 @@ export async function launch({
   });
   const page = await browser.newPage();
   await page.setViewport({ width, height });
+  const kinds = quiz ? (Array.isArray(quiz) ? quiz : [quiz]) : null;
   await page.evaluateOnNewDocument(
-    (lang, kinds) => {
+    (lang, disabled) => {
       localStorage.setItem("amaze:lang", lang);
-      if (kinds) localStorage.setItem("amaze:ops", JSON.stringify(kinds));
+      if (disabled)
+        localStorage.setItem("amaze:opsDisabled", JSON.stringify(disabled));
     },
     lang,
-    quiz ? (Array.isArray(quiz) ? quiz : [quiz]) : null,
+    kinds && disabledFor(kinds),
   );
   const hash = [debug && "debug", test && "test"].filter(Boolean).join("-");
   await page.goto(hash ? `${url}/#${hash}` : url, {
@@ -155,8 +162,9 @@ export async function bodyText(page) {
 // overwrite this on reload.
 export async function setQuizKinds(page, kinds) {
   await page.evaluate(
-    (kinds) => localStorage.setItem("amaze:ops", JSON.stringify(kinds)),
-    kinds,
+    (disabled) =>
+      localStorage.setItem("amaze:opsDisabled", JSON.stringify(disabled)),
+    disabledFor(kinds),
   );
   await page.reload({ waitUntil: "networkidle0" });
   await sleep(1200);

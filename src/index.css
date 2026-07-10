@@ -4,13 +4,148 @@
   box-sizing: border-box;
 }
 
+:root {
+  --accent: #ff6b35;
+  --accent-soft: #ffa075;
+  --accent-grad: linear-gradient(135deg, #ffb35c, #ff6b35 55%, #f5431f);
+  --surface: rgba(17, 19, 31, 0.85);
+  --surface-bright: rgba(255, 255, 255, 0.07);
+  --stroke: rgba(255, 255, 255, 0.1);
+  --text: #f4f6fb;
+  --text-dim: rgba(233, 237, 247, 0.6);
+}
+
 body {
   background: #000;
   overflow: hidden;
-  font-family: "Courier New", monospace;
+  font-family: "Nunito", "Heebo", system-ui, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   width: 100vw;
   height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+/* Frosted-glass card — used for modals and full-screen overlays, where the
+   scene behind is paused (frameloop="demand"), so the blur costs nothing
+   per frame. */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: 24px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* HUD chip — deliberately NO backdrop-filter: blurring over a canvas that
+   redraws every frame would force the compositor to re-blur every frame. */
+.chip {
+  background: rgba(10, 12, 22, 0.66);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 30px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-primary {
+  background: var(--accent-grad);
+  box-shadow:
+    0 6px 20px rgba(255, 92, 40, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 2px rgba(90, 20, 0, 0.25);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(255, 92, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-ghost {
+  background: var(--surface-bright);
+  border: 1px solid var(--stroke);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.quiz-input {
+  font-size: 36px;
+  font-weight: 800;
+  width: 130px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent-soft);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 10px 0;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.quiz-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.18);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

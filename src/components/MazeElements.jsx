@@ -1,32 +1,67 @@
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo, useCallback, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { CELL_SIZE, WALL_HEIGHT } from "../lib/maze";
-import { createWallMaps, zoneVariant } from "../lib/wallTexture";
+import {
+  createWallMaps,
+  createFloorMaps,
+  zoneVariant,
+} from "../lib/wallTexture";
 import { ICON_KINDS, createIconTexture } from "../lib/wallIcons";
 
 export function MazeFloor({ game, theme }) {
+  const maps = useMemo(() => createFloorMaps(theme), [theme]);
+  const mat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: maps.map,
+        normalMap: maps.normalMap,
+        roughnessMap: maps.roughnessMap,
+        roughness: 1, // actual roughness baked into roughnessMap
+        metalness: maps.metalness ?? 0,
+      }),
+    [maps],
+  );
+  useEffect(
+    () => () => {
+      maps.map.dispose();
+      maps.normalMap.dispose();
+      maps.roughnessMap.dispose();
+      mat.dispose();
+    },
+    [maps, mat],
+  );
+  // One texture tile per maze cell: the shaped floor's per-cell planes use
+  // UV 0..1 as-is; the plain rectangle repeats the tile across the grid.
+  useEffect(() => {
+    const rx = game.mask ? 1 : game.width;
+    const ry = game.mask ? 1 : game.height;
+    for (const t of [maps.map, maps.normalMap, maps.roughnessMap]) {
+      t.repeat.set(rx, ry);
+    }
+  }, [maps, game]);
+
   if (game.mask) {
-    return <ShapedFloor game={game} theme={theme} />;
+    return <ShapedFloor game={game} mat={mat} />;
   }
   const w = game.width * CELL_SIZE;
   const h = game.height * CELL_SIZE;
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[w / 2, 0, h / 2]}>
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[w / 2, 0, h / 2]}
+      material={mat}
+      receiveShadow
+    >
       <planeGeometry args={[w, h]} />
-      <meshStandardMaterial color={theme.floor} roughness={0.9} />
     </mesh>
   );
 }
 
-function ShapedFloor({ game, theme }) {
+function ShapedFloor({ game, mat }) {
   const { mask } = game;
   const geo = useMemo(() => new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE), []);
-  const mat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({ color: theme.floor, roughness: 0.9 }),
-    [theme.floor],
-  );
 
   const tiles = useMemo(() => {
     const t = [];
@@ -59,7 +94,9 @@ function ShapedFloor({ game, theme }) {
     [tiles],
   );
 
-  return <instancedMesh ref={setRef} args={[geo, mat, tiles.length]} />;
+  return (
+    <instancedMesh ref={setRef} args={[geo, mat, tiles.length]} receiveShadow />
+  );
 }
 
 export function PlayerLight({ playerPos }) {
@@ -69,13 +106,49 @@ export function PlayerLight({ playerPos }) {
       ref.current.position.set(playerPos.current.x, 4, playerPos.current.z);
     }
   });
+  // Warm torch-like fill — plays against the cool moonlight key for the
+  // classic warm/cool contrast.
   return (
     <pointLight
       ref={ref}
       intensity={30}
       distance={30}
-      color="#ccd0e0"
+      color="#ffd9ae"
       decay={2}
+    />
+  );
+}
+
+// Cool shadow-casting "moonlight" that follows the player. The tight ortho
+// frustum keeps the shadow map sharp and the pass cheap (the merged walls
+// render in a handful of draw calls).
+export function KeyLight({ playerPos }) {
+  const ref = useRef();
+  useFrame(() => {
+    const l = ref.current;
+    if (!l) return;
+    const p = playerPos.current;
+    // Steep angle: wall shadows stay short so corridors don't go dark
+    l.position.set(p.x + 4, 16, p.z + 6);
+    l.target.position.set(p.x, 0, p.z);
+    l.target.updateMatrixWorld();
+  });
+  return (
+    <directionalLight
+      ref={ref}
+      castShadow
+      intensity={1.5}
+      color="#b9c8ff"
+      shadow-mapSize-width={1024}
+      shadow-mapSize-height={1024}
+      shadow-camera-left={-16}
+      shadow-camera-right={16}
+      shadow-camera-top={16}
+      shadow-camera-bottom={-16}
+      shadow-camera-near={1}
+      shadow-camera-far={45}
+      shadow-bias={-0.0003}
+      shadow-normalBias={0.05}
     />
   );
 }
@@ -166,6 +239,50 @@ export function MazeWalls({ wallBoxes, theme, playerPos, topView, game }) {
     [wallBoxes, zonesX, zonesZ, mazeW, mazeH],
   );
 
+  // First-person walls: everything in a (zone, axis) bucket shares one
+  // material, so merge each bucket into a single mesh. Cuts wall rendering
+  // from one draw call per wall run (hundreds on big mazes) to at most
+  // zones × 2.
+  const mergedWalls = useMemo(() => {
+    const buckets = new Map();
+    wallBoxes.forEach((box, i) => {
+      const key = `${meshData[i].zone}|${box.axis}`;
+      const geo = meshData[i].geo.clone();
+      geo.translate(box.cx, WALL_HEIGHT / 2, box.cz);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(geo);
+    });
+    const out = [];
+    for (const [key, geos] of buckets) {
+      const [zone, axis] = key.split("|");
+      const geo = mergeGeometries(geos);
+      geos.forEach((g) => g.dispose());
+      out.push({ geo, zone: Number(zone), axis });
+    }
+    return out;
+  }, [wallBoxes, meshData]);
+
+  // Free GPU buffers of the previous level's geometry (the meshes themselves
+  // stay mounted across level changes, so R3F's unmount disposal never runs)
+  useEffect(
+    () => () => mergedWalls.forEach((m) => m.geo.dispose()),
+    [mergedWalls],
+  );
+  useEffect(() => () => meshData.forEach((m) => m.geo.dispose()), [meshData]);
+  useEffect(
+    () => () => {
+      for (const set of variants) {
+        for (const mat of Object.values(set)) {
+          mat.map?.dispose();
+          mat.normalMap?.dispose();
+          mat.roughnessMap?.dispose();
+          mat.dispose();
+        }
+      }
+    },
+    [variants],
+  );
+
   const groupRef = useRef();
   const wasTopView = useRef(false);
 
@@ -204,20 +321,37 @@ export function MazeWalls({ wallBoxes, theme, playerPos, topView, game }) {
     }
   });
 
+  // Both sets stay mounted and toggle via `visible` — unmounting would make
+  // R3F dispose the shared geometries/materials on every view switch.
   return (
-    <group ref={groupRef}>
-      {wallBoxes.map((box, i) => {
-        const set = variants[meshData[i].zone];
-        return (
+    <>
+      <group visible={!topView}>
+        {mergedWalls.map((m, i) => (
           <mesh
             key={i}
-            position={[box.cx, WALL_HEIGHT / 2, box.cz]}
-            geometry={meshData[i].geo}
-            material={box.axis === "h" ? set.H : set.V}
+            geometry={m.geo}
+            material={m.axis === "h" ? variants[m.zone].H : variants[m.zone].V}
+            castShadow
+            receiveShadow
           />
-        );
-      })}
-    </group>
+        ))}
+      </group>
+      {/* Top view needs per-box meshes so walls near the player can be
+          individually made transparent */}
+      <group ref={groupRef} visible={topView}>
+        {wallBoxes.map((box, i) => {
+          const set = variants[meshData[i].zone];
+          return (
+            <mesh
+              key={i}
+              position={[box.cx, WALL_HEIGHT / 2, box.cz]}
+              geometry={meshData[i].geo}
+              material={box.axis === "h" ? set.H : set.V}
+            />
+          );
+        })}
+      </group>
+    </>
   );
 }
 
@@ -246,11 +380,11 @@ export function WallDecals({ wallBoxes, game }) {
         map: tex,
         emissiveMap: tex,
         emissive: new THREE.Color(0xffffff),
-        emissiveIntensity: 0.1, // barely-there glow
+        emissiveIntensity: 0.16, // gentle glow so landmarks read in the gloom
         roughness: 0.95,
         metalness: 0,
-        transparent: true, // washed-out: let the wall show through
-        opacity: 0.5,
+        transparent: true, // slight translucency keeps it "painted on"
+        opacity: 0.8,
         depthWrite: false,
         alphaTest: 0.04,
         polygonOffset: true,

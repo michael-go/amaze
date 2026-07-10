@@ -1,9 +1,17 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 
 export default function TreasureChest({ position }) {
   const lidRef = useRef();
   const glowRef = useRef();
+  const rootRef = useRef();
+
+  // Chest body, lid and coins cast shadows; skip the transparent ground glow
+  useEffect(() => {
+    rootRef.current?.traverse((o) => {
+      if (o.isMesh && !o.material?.transparent) o.castShadow = true;
+    });
+  }, []);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
@@ -16,7 +24,7 @@ export default function TreasureChest({ position }) {
   });
 
   return (
-    <group position={[position[0], 0, position[2]]}>
+    <group ref={rootRef} position={[position[0], 0, position[2]]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <circleGeometry args={[0.9, 32]} />
         <meshStandardMaterial

@@ -62,11 +62,11 @@ export default function HUD({
     <div style={{ ...styles.hud, direction: t.dir, fontFamily: t.font }}>
       <div style={styles.topRow}>
         {trailActive && (
-          <div style={styles.trailBox}>
+          <div className="chip" style={styles.trailBox}>
             <span style={{ fontSize: 20 }}>🐾</span>
           </div>
         )}
-        <div style={styles.left}>
+        <div className="chip" style={styles.left}>
           <span style={{ ...styles.levelBadge, fontSize: 20 }}>
             {t.level} {level}
           </span>
@@ -89,7 +89,11 @@ export default function HUD({
         </div>
       </div>
       <div style={styles.right}>
-        <button style={styles.viewBtn} onClick={onToggleView}>
+        <button
+          className="btn btn-ghost"
+          style={styles.viewBtn}
+          onClick={onToggleView}
+        >
           {topView ? t.firstPerson : t.topView}
         </button>
       </div>
@@ -125,6 +129,7 @@ function PowerBanner({ activePower, powerSecs, t }) {
 
   return (
     <div
+      className="chip"
       style={{
         position: "absolute",
         top: "12%",
@@ -132,10 +137,8 @@ function PowerBanner({ activePower, powerSecs, t }) {
         transform: "translateX(-50%)",
         textAlign: "center",
         animation: "power-pulse 1s ease-in-out infinite",
-        background: "rgba(0,0,0,0.5)",
-        padding: "12px 28px",
-        borderRadius: 12,
-        backdropFilter: "blur(4px)",
+        padding: "14px 30px",
+        borderRadius: 18,
       }}
     >
       <div
@@ -154,8 +157,7 @@ function PowerBanner({ activePower, powerSecs, t }) {
         <div
           style={{
             fontSize: "clamp(36px, 7vw, 56px)",
-            fontFamily: "'Courier New', monospace",
-            fontWeight: "bold",
+            fontWeight: 900,
             color,
             textShadow: `0 0 30px ${glow}`,
             marginTop: 4,
@@ -190,16 +192,12 @@ const styles = {
     gap: 8,
   },
   trailBox: {
-    background: "rgba(0,0,0,0.45)",
     padding: "10px 12px",
-    borderRadius: 8,
     display: "flex",
     alignItems: "center",
   },
   left: {
-    background: "rgba(0,0,0,0.45)",
-    padding: "10px 16px",
-    borderRadius: 8,
+    padding: "12px 18px",
   },
   right: {
     position: "absolute",
@@ -208,45 +206,45 @@ const styles = {
     pointerEvents: "all",
   },
   levelBadge: {
-    color: "#ff6b35",
+    color: "var(--accent-soft)",
     fontFamily: "inherit",
     fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 3,
-    textShadow: "0 0 10px #ff6b35",
+    fontWeight: 800,
+    letterSpacing: 2,
+    textShadow: "0 0 14px rgba(255,107,53,0.45)",
   },
   viewBtn: {
-    background: "rgba(0,0,0,0.55)",
-    color: "#fff",
-    border: "2px solid #ff6b35",
+    background: "rgba(10, 12, 22, 0.66)",
     padding: "10px 18px",
     fontFamily: "inherit",
     fontSize: 14,
-    cursor: "pointer",
-    borderRadius: 6,
-    letterSpacing: 1,
-    fontWeight: "bold",
+    borderRadius: 13,
+    letterSpacing: 0.5,
+    fontWeight: 800,
   },
   stepsBar: {
-    marginTop: 12,
+    marginTop: 10,
   },
   stepsLabel: {
-    color: "rgba(255,255,255,0.5)",
+    color: "var(--text-dim)",
     fontFamily: "inherit",
-    fontSize: 13,
-    letterSpacing: 2,
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: 1.5,
+    marginBottom: 5,
   },
   stepsTrack: {
     width: 160,
-    height: 14,
-    background: "rgba(255,255,255,0.1)",
-    borderRadius: 5,
+    height: 10,
+    background: "rgba(255,255,255,0.12)",
+    borderRadius: 999,
     overflow: "hidden",
+    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.45)",
   },
   stepsFill: {
     height: "100%",
-    borderRadius: 5,
+    borderRadius: 999,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
     transition: "width 0.3s ease, background 0.3s ease",
   },
   controls: {
@@ -254,9 +252,10 @@ const styles = {
     bottom: 16,
     left: "50%",
     transform: "translateX(-50%)",
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.38)",
     fontFamily: "inherit",
     fontSize: 11,
+    fontWeight: 700,
     letterSpacing: 1,
     whiteSpace: "nowrap",
   },
