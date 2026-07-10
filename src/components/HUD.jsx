@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useI18n } from "../lib/i18n";
+import { CELL_SIZE } from "../lib/maze";
 
 export default function HUD({
   level,
@@ -11,6 +12,9 @@ export default function HUD({
   activePower,
   powerSecs,
   trailActive,
+  mapActive,
+  game,
+  playerInfoRef,
 }) {
   const { t } = useI18n();
   const pct = maxSteps > 0 ? Math.max(0, stepsRemaining / maxSteps) : 1;
@@ -48,6 +52,17 @@ export default function HUD({
     }
     setShowTrailFlash(false);
   }, [trailActive]);
+
+  // Brief flash when the map is unlocked
+  const [showMapFlash, setShowMapFlash] = useState(false);
+  useEffect(() => {
+    if (mapActive) {
+      setShowMapFlash(true);
+      const id = setTimeout(() => setShowMapFlash(false), 2000);
+      return () => clearTimeout(id);
+    }
+    setShowMapFlash(false);
+  }, [mapActive]);
 
   const barColor =
     pct > 0.6
@@ -96,6 +111,10 @@ export default function HUD({
         >
           {topView ? t.firstPerson : t.topView}
         </button>
+        {/* Minimap lives under the view button; the top view IS the map */}
+        {mapActive && !topView && !won && (
+          <MiniMap game={game} playerInfoRef={playerInfoRef} />
+        )}
       </div>
       <div style={styles.controls}>{t.controls}</div>
       {activePower && powerSecs > 0 && (
@@ -104,9 +123,134 @@ export default function HUD({
       {showTrailFlash && (
         <PowerBanner activePower="trail" powerSecs={null} t={t} />
       )}
+      {showMapFlash && <PowerBanner activePower="map" powerSecs={null} t={t} />}
       {showStepsFlash && (
         <PowerBanner activePower="steps" powerSecs={null} t={t} />
       )}
+    </div>
+  );
+}
+
+// Always-on minimap unlocked by the "map" magic item: maze walls, the
+// treasure, and a live player arrow. Walls are pre-rendered once per level;
+// each frame only blits that image and draws the two markers.
+const MAP_CSS = 148; // on-screen size
+const MAP_PX = 296; // canvas resolution (2x for crisp lines)
+
+function MiniMap({ game, playerInfoRef }) {
+  const canvasRef = useRef(null);
+
+  // px per world unit + centering offsets for non-square mazes
+  const view = useMemo(() => {
+    const worldW = game.width * CELL_SIZE;
+    const worldH = game.height * CELL_SIZE;
+    const scale = (MAP_PX - 12) / Math.max(worldW, worldH);
+    return {
+      scale,
+      ox: (MAP_PX - worldW * scale) / 2,
+      oy: (MAP_PX - worldH * scale) / 2,
+    };
+  }, [game]);
+
+  const wallsImage = useMemo(() => {
+    const { scale, ox, oy } = view;
+    const c = document.createElement("canvas");
+    c.width = c.height = MAP_PX;
+    const ctx = c.getContext("2d");
+    const cp = CELL_SIZE * scale; // cell size in px
+    // corridor floor (also outlines the maze shape)
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    for (let y = 0; y < game.height; y++) {
+      for (let x = 0; x < game.width; x++) {
+        if (game.mask && !game.mask[y][x]) continue;
+        ctx.fillRect(ox + x * cp, oy + y * cp, cp + 0.5, cp + 0.5);
+      }
+    }
+    // walls — draw all four sides per cell (shared walls just overdraw)
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let y = 0; y < game.height; y++) {
+      for (let x = 0; x < game.width; x++) {
+        if (game.mask && !game.mask[y][x]) continue;
+        const w = game.cells[y][x].walls;
+        const px = ox + x * cp,
+          py = oy + y * cp;
+        if (w.top) {
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + cp, py);
+        }
+        if (w.left) {
+          ctx.moveTo(px, py);
+          ctx.lineTo(px, py + cp);
+        }
+        if (w.right) {
+          ctx.moveTo(px + cp, py);
+          ctx.lineTo(px + cp, py + cp);
+        }
+        if (w.bottom) {
+          ctx.moveTo(px, py + cp);
+          ctx.lineTo(px + cp, py + cp);
+        }
+      }
+    }
+    ctx.stroke();
+    return c;
+  }, [game, view]);
+
+  useEffect(() => {
+    const { scale, ox, oy } = view;
+    let raf;
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, MAP_PX, MAP_PX);
+      ctx.drawImage(wallsImage, 0, 0);
+      // treasure
+      const ex = ox + game.exitPos[0] * scale;
+      const ey = oy + game.exitPos[2] * scale;
+      ctx.fillStyle = "#ffd700";
+      ctx.beginPath();
+      ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // player arrow
+      const info = playerInfoRef?.current;
+      if (info) {
+        const px = ox + info.pos.x * scale;
+        const py = oy + info.pos.z * scale;
+        // world forward = (-sin yaw, -cos yaw) in (x, z) = canvas (x, y)
+        const a = Math.atan2(-Math.cos(info.yaw), -Math.sin(info.yaw));
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(a);
+        ctx.fillStyle = "#ff6b35";
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(8, 0);
+        ctx.lineTo(-5, 5.5);
+        ctx.lineTo(-5, -5.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [game, view, wallsImage, playerInfoRef]);
+
+  return (
+    <div className="chip" style={styles.miniMap}>
+      <canvas
+        ref={canvasRef}
+        width={MAP_PX}
+        height={MAP_PX}
+        style={{ width: MAP_CSS, height: MAP_CSS, display: "block" }}
+      />
     </div>
   );
 }
@@ -117,6 +261,7 @@ function PowerBanner({ activePower, powerSecs, t }) {
     fly: { color: "#ffcc00", glow: "rgba(255,204,0,0.4)" },
     trail: { color: "#44ee88", glow: "rgba(68,238,136,0.4)" },
     steps: { color: "#ff44aa", glow: "rgba(255,68,170,0.4)" },
+    map: { color: "#c98cff", glow: "rgba(201,140,255,0.4)" },
   };
   const { color, glow } = colors[activePower] || colors.ghost;
   const labels = {
@@ -124,6 +269,7 @@ function PowerBanner({ activePower, powerSecs, t }) {
     fly: t.powerFly,
     trail: t.powerTrail,
     steps: t.powerSteps,
+    map: t.powerMap,
   };
   const label = labels[activePower] || "";
 
@@ -204,6 +350,14 @@ const styles = {
     top: 16,
     right: 20,
     pointerEvents: "all",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  miniMap: {
+    padding: 6,
+    borderRadius: 16,
   },
   levelBadge: {
     color: "var(--accent-soft)",

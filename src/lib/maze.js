@@ -5,6 +5,7 @@ export const MAGIC_GHOST = "ghost"; // walk through walls
 export const MAGIC_FLY = "fly"; // float above walls
 export const MAGIC_TRAIL = "trail"; // show visited path on floor
 export const MAGIC_STEPS = "steps"; // refill steps bar
+export const MAGIC_MAP = "map"; // persistent minimap for the level
 
 export const CELL_SIZE = 4;
 export const WALL_HEIGHT = 3;
@@ -641,7 +642,9 @@ export function getMazeWalls(cells) {
 export function placeMagicItems(cells, count, mask, startCell, exitCell) {
   const height = cells.length;
   const width = cells[0].length;
-  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL].sort(() => _rng() - 0.5);
+  const types = [MAGIC_GHOST, MAGIC_FLY, MAGIC_TRAIL, MAGIC_MAP].sort(
+    () => _rng() - 0.5,
+  );
   const items = [];
   const used = new Set();
   if (startCell) used.add(`${startCell.x},${startCell.y}`);

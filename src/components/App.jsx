@@ -18,6 +18,7 @@ import {
   MAGIC_TRAIL,
   MAGIC_GHOST,
   MAGIC_FLY,
+  MAGIC_MAP,
 } from "../lib/maze";
 import { getLevelConfig } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
@@ -187,6 +188,7 @@ export default function App() {
   const [activePower, setActivePower] = useState(null);
   const [powerSecs, setPowerSecs] = useState(0);
   const [trailActive, setTrailActive] = useState(false);
+  const [mapActive, setMapActive] = useState(false);
   // Cell key ("x,y") of an item whose pickup quiz was cancelled
   const [skippedItem, setSkippedItem] = useState(null);
   const playerInfoRef = useRef(null);
@@ -247,6 +249,7 @@ export default function App() {
     setActivePower(null);
     setPowerSecs(0);
     setTrailActive(false);
+    setMapActive(false);
     setSkippedItem(null);
     setStepsDepleted(0);
     setStepsUsed(0);
@@ -370,16 +373,19 @@ export default function App() {
     bonusSpawnsRef.current = milestone;
     const hasTrail =
       trailActive || magicItems.some((it) => it.type === "trail");
+    const hasMap = mapActive || magicItems.some((it) => it.type === "map");
     const roll = Math.random();
-    // Mostly the fun movement powers; trail only if not already running
+    // Mostly the fun movement powers; trail/map only while not already owned
     const type =
-      !hasTrail && roll < 0.15
+      !hasTrail && roll < 0.12
         ? MAGIC_TRAIL
-        : roll < 0.55
-          ? MAGIC_GHOST
-          : roll < 0.9
-            ? MAGIC_FLY
-            : MAGIC_STEPS;
+        : !hasMap && roll >= 0.12 && roll < 0.24
+          ? MAGIC_MAP
+          : roll < 0.55
+            ? MAGIC_GHOST
+            : roll < 0.9
+              ? MAGIC_FLY
+              : MAGIC_STEPS;
     const item = placeSingleItem(
       game.cells,
       magicItems,
@@ -389,7 +395,16 @@ export default function App() {
       game.exitCell,
     );
     if (item) setMagicItems((items) => [...items, item]);
-  }, [stepsUsed, level, screen, maxSteps, magicItems, trailActive, game]);
+  }, [
+    stepsUsed,
+    level,
+    screen,
+    maxSteps,
+    magicItems,
+    trailActive,
+    mapActive,
+    game,
+  ]);
 
   const onPickupItem = useCallback(
     (item) => {
@@ -405,6 +420,9 @@ export default function App() {
         if (item.type === "trail") {
           setTrailActive(true);
           setMagicItems((prev) => prev.filter((it) => it.type !== "trail"));
+        } else if (item.type === "map") {
+          setMapActive(true);
+          setMagicItems((prev) => prev.filter((it) => it.type !== "map"));
         } else if (item.type === "steps") {
           setStepsRemaining(maxSteps);
           setMagicItems((prev) => prev.filter((it) => it !== item));
@@ -769,6 +787,9 @@ export default function App() {
         activePower={activePower}
         powerSecs={powerSecs}
         trailActive={trailActive}
+        mapActive={mapActive}
+        game={game}
+        playerInfoRef={playerInfoRef}
       />
 
       {quizInfo && (

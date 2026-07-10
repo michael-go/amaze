@@ -1,13 +1,14 @@
 import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS } from "../lib/maze";
+import { MAGIC_GHOST, MAGIC_TRAIL, MAGIC_STEPS, MAGIC_MAP } from "../lib/maze";
 
 export const ITEM_COLORS = {
   ghost: { color: "#44aaff", emissive: "#2266ff" },
   fly: { color: "#ffcc00", emissive: "#ff8800" },
   trail: { color: "#44ee88", emissive: "#22aa55" },
   steps: { color: "#ff44aa", emissive: "#cc2288" },
+  map: { color: "#c98cff", emissive: "#8844dd" },
 };
 
 export default function MagicItem({ item }) {
@@ -43,6 +44,8 @@ export default function MagicItem({ item }) {
           <TrailCompass color={color} emissive={emissive} />
         ) : item.type === MAGIC_STEPS ? (
           <StepsHeart color={color} emissive={emissive} />
+        ) : item.type === MAGIC_MAP ? (
+          <MapScroll emissive={emissive} />
         ) : (
           <FlyWings color={color} emissive={emissive} />
         )}
@@ -173,6 +176,74 @@ function TrailCompass({ color, emissive }) {
           emissiveIntensity={0.5}
         />
       </mesh>
+    </group>
+  );
+}
+
+function MapScroll({ emissive }) {
+  // Parchment with a maze doodle and a red X
+  const mapTexture = useMemo(() => {
+    const W = 64,
+      H = 48;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f1e2c4";
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#7a5a30";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(10, 38);
+    ctx.lineTo(10, 12);
+    ctx.lineTo(30, 12);
+    ctx.moveTo(20, 38);
+    ctx.lineTo(20, 22);
+    ctx.lineTo(38, 22);
+    ctx.lineTo(38, 32);
+    ctx.moveTo(30, 12);
+    ctx.lineTo(52, 12);
+    ctx.stroke();
+    ctx.strokeStyle = "#d93030";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(46, 28);
+    ctx.lineTo(54, 38);
+    ctx.moveTo(54, 28);
+    ctx.lineTo(46, 38);
+    ctx.stroke();
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+  useEffect(() => () => mapTexture.dispose(), [mapTexture]);
+
+  return (
+    <group>
+      {/* Unrolled sheet */}
+      <mesh>
+        <planeGeometry args={[0.34, 0.26]} />
+        <meshStandardMaterial
+          map={mapTexture}
+          emissive={emissive}
+          emissiveIntensity={0.15}
+          side={THREE.DoubleSide}
+          roughness={0.8}
+        />
+      </mesh>
+      {/* Rolled edges */}
+      {[-0.18, 0.18].map((x) => (
+        <mesh key={x} position={[x, 0, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.3, 10]} />
+          <meshStandardMaterial
+            color="#e0cba4"
+            emissive={emissive}
+            emissiveIntensity={0.2}
+            roughness={0.7}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }

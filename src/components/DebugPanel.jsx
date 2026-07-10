@@ -28,6 +28,7 @@ function DebugControls({
       Fly: button(() => onSpawnItem?.("fly")),
       Trail: button(() => onSpawnItem?.("trail")),
       "Steps Refill": button(() => onSpawnItem?.("steps")),
+      Map: button(() => onSpawnItem?.("map")),
     }),
     [onSpawnItem],
   );
