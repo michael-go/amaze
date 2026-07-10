@@ -167,7 +167,9 @@ export default function KidCharacter({
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const p = playerPos.current;
-    const yOff = playerY ? playerY.current : 0;
+    // -0.08 grounds the shoes: the foot boxes bottom out at local y=0.08,
+    // so without it the kid hovers visibly above the floor
+    const yOff = (playerY ? playerY.current : 0) - 0.08;
     groupRef.current.position.set(p.x, yOff, p.z);
     groupRef.current.rotation.y = yaw.current + Math.PI;
 
