@@ -131,20 +131,22 @@ export default function HUD({
   );
 }
 
-// Always-on minimap unlocked by the "map" magic item: maze walls, the
-// treasure, and a live player arrow. Walls are pre-rendered once per level;
-// each frame only blits that image and draws the two markers.
-const MAP_CSS = 148; // on-screen size
-const MAP_PX = 296; // canvas resolution (2x for crisp lines)
+// Always-on minimap unlocked by the "map" magic item, styled as a pirate
+// treasure map: parchment with worn edges, ink-drawn walls, a red X on the
+// treasure and a live player arrow. The parchment + walls + X are
+// pre-rendered once per level; each frame only blits that image and draws
+// the arrow.
+const MAP_CSS = 152; // on-screen size
+const MAP_PX = 304; // canvas resolution (2x for crisp lines)
 
 function MiniMap({ game, playerInfoRef }) {
   const canvasRef = useRef(null);
 
-  // px per world unit + centering offsets for non-square mazes
+  // px per world unit + centering offsets, leaving parchment border room
   const view = useMemo(() => {
     const worldW = game.width * CELL_SIZE;
     const worldH = game.height * CELL_SIZE;
-    const scale = (MAP_PX - 12) / Math.max(worldW, worldH);
+    const scale = (MAP_PX - 48) / Math.max(worldW, worldH);
     return {
       scale,
       ox: (MAP_PX - worldW * scale) / 2,
@@ -152,23 +154,74 @@ function MiniMap({ game, playerInfoRef }) {
     };
   }, [game]);
 
-  const wallsImage = useMemo(() => {
+  const mapImage = useMemo(() => {
     const { scale, ox, oy } = view;
     const c = document.createElement("canvas");
     c.width = c.height = MAP_PX;
     const ctx = c.getContext("2d");
+    // Seeded rand so the parchment blemishes are stable per level
+    let s = 40503 + game.width * 7 + game.height * 131;
+    const rnd = () => {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+
+    // ── Parchment sheet with a wobbly, hand-torn outline ──
+    const m = 7; // outer margin
+    const wob = () => (rnd() - 0.5) * 8;
+    const steps = 7;
+    const span = MAP_PX - 2 * m;
+    ctx.beginPath();
+    ctx.moveTo(m + wob(), m + wob());
+    for (let i = 1; i <= steps; i++)
+      ctx.lineTo(m + (span * i) / steps + wob(), m + wob());
+    for (let i = 1; i <= steps; i++)
+      ctx.lineTo(MAP_PX - m + wob(), m + (span * i) / steps + wob());
+    for (let i = 1; i <= steps; i++)
+      ctx.lineTo(MAP_PX - m - (span * i) / steps + wob(), MAP_PX - m + wob());
+    for (let i = 1; i <= steps; i++)
+      ctx.lineTo(m + wob(), MAP_PX - m - (span * i) / steps + wob());
+    ctx.closePath();
+    const bg = ctx.createLinearGradient(0, 0, MAP_PX, MAP_PX);
+    bg.addColorStop(0, "#ecd9ae");
+    bg.addColorStop(0.55, "#e2c893");
+    bg.addColorStop(1, "#d3b47f");
+    ctx.fillStyle = bg;
+    ctx.fill();
+    // burnt/worn edge: layered strokes of the same wobbly path
+    ctx.strokeStyle = "rgba(92,60,28,0.55)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(92,60,28,0.2)";
+    ctx.lineWidth = 10;
+    ctx.stroke();
+    ctx.save();
+    ctx.clip(); // keep stains and ink inside the sheet
+    // aging blotches
+    for (let n = 0; n < 8; n++) {
+      const x = rnd() * MAP_PX,
+        y = rnd() * MAP_PX,
+        r = 18 + rnd() * 42;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(140,100,50,${0.08 + rnd() * 0.1})`);
+      g.addColorStop(1, "rgba(140,100,50,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+
+    // ── The maze, drawn in ink ──
     const cp = CELL_SIZE * scale; // cell size in px
-    // corridor floor (also outlines the maze shape)
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    // corridor wash (also outlines the maze shape)
+    ctx.fillStyle = "rgba(116,84,44,0.13)";
     for (let y = 0; y < game.height; y++) {
       for (let x = 0; x < game.width; x++) {
         if (game.mask && !game.mask[y][x]) continue;
         ctx.fillRect(ox + x * cp, oy + y * cp, cp + 0.5, cp + 0.5);
       }
     }
-    // walls — draw all four sides per cell (shared walls just overdraw)
-    ctx.strokeStyle = "rgba(255,255,255,0.85)";
-    ctx.lineWidth = 2;
+    // walls — all four sides per cell (shared walls just overdraw)
+    ctx.strokeStyle = "rgba(74,46,20,0.88)";
+    ctx.lineWidth = 2.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     for (let y = 0; y < game.height; y++) {
@@ -196,6 +249,50 @@ function MiniMap({ game, playerInfoRef }) {
       }
     }
     ctx.stroke();
+
+    // ── X marks the spot ──
+    const ex = ox + game.exitPos[0] * scale;
+    const ey = oy + game.exitPos[2] * scale;
+    ctx.strokeStyle = "#b3261e";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ex - 7, ey - 7);
+    ctx.lineTo(ex + 7, ey + 7);
+    ctx.moveTo(ex - 7, ey + 7);
+    ctx.lineTo(ex + 7, ey - 7);
+    ctx.stroke();
+
+    // ── Tiny compass rose, in whichever corner is farthest from the X ──
+    const corners = [
+      [27, 27],
+      [MAP_PX - 27, 27],
+      [27, MAP_PX - 27],
+      [MAP_PX - 27, MAP_PX - 27],
+    ];
+    const [cxr, cyr] = corners.reduce((best, c) =>
+      Math.hypot(c[0] - ex, c[1] - ey) > Math.hypot(best[0] - ex, best[1] - ey)
+        ? c
+        : best,
+    );
+    ctx.fillStyle = "rgba(92,60,28,0.75)";
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const long = i % 2 === 0;
+      const a = (i * Math.PI) / 4 - Math.PI / 2;
+      const r = long ? 13 : 4;
+      const x = cxr + Math.cos(a) * r,
+        y = cyr + Math.sin(a) * r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(236,217,174,0.9)";
+    ctx.beginPath();
+    ctx.arc(cxr, cyr, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
     return c;
   }, [game, view]);
 
@@ -208,14 +305,7 @@ function MiniMap({ game, playerInfoRef }) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, MAP_PX, MAP_PX);
-      ctx.drawImage(wallsImage, 0, 0);
-      // treasure
-      const ex = ox + game.exitPos[0] * scale;
-      const ey = oy + game.exitPos[2] * scale;
-      ctx.fillStyle = "#ffd700";
-      ctx.beginPath();
-      ctx.arc(ex, ey, 5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(mapImage, 0, 0);
       // player arrow
       const info = playerInfoRef?.current;
       if (info) {
@@ -227,7 +317,7 @@ function MiniMap({ game, playerInfoRef }) {
         ctx.translate(px, py);
         ctx.rotate(a);
         ctx.fillStyle = "#ff6b35";
-        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.strokeStyle = "rgba(74,46,20,0.85)";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(8, 0);
@@ -241,10 +331,10 @@ function MiniMap({ game, playerInfoRef }) {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [game, view, wallsImage, playerInfoRef]);
+  }, [game, view, mapImage, playerInfoRef]);
 
   return (
-    <div className="chip" style={styles.miniMap}>
+    <div style={styles.miniMap}>
       <canvas
         ref={canvasRef}
         width={MAP_PX}
@@ -356,8 +446,8 @@ const styles = {
     gap: 10,
   },
   miniMap: {
-    padding: 6,
-    borderRadius: 16,
+    // Parchment sheet with a soft shadow, no panel behind it
+    filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.55))",
   },
   levelBadge: {
     color: "var(--accent-soft)",
