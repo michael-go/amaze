@@ -1,5 +1,14 @@
 // Per-level maze configuration for progressive difficulty
 
+// Default seeds: deterministic per level so the same level = the same maze
+// on refresh (and in level-picker previews)
+export function defaultMazeSeed(level) {
+  return level * 7919 + 42;
+}
+export function defaultItemsSeed(level) {
+  return level * 6271 + 137;
+}
+
 const SHAPES_MID = ["square", "L", "T"];
 const SHAPES_HIGH = ["square", "L", "T", "U"];
 const SHAPES_ALL = ["L", "T", "U", "diamond", "donut"];

@@ -20,10 +20,15 @@ import {
   MAGIC_FLY,
   MAGIC_MAP,
 } from "../lib/maze";
-import { getLevelConfig } from "../lib/levelConfig";
+import {
+  getLevelConfig,
+  defaultMazeSeed,
+  defaultItemsSeed,
+} from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
+import LevelPicker from "./LevelPicker";
 import { ALL_TYPES } from "../lib/quiz";
 import { ITEM_COLORS } from "./MagicItem";
 import {
@@ -151,14 +156,6 @@ function fmtTime(s) {
 
 const MEDAL_EMOJI = { gold: "🥇", silver: "🥈", bronze: "🥉" };
 
-// Default seeds: deterministic per level so same level = same maze on refresh
-function defaultMazeSeed(level) {
-  return level * 7919 + 42;
-}
-function defaultItemsSeed(level) {
-  return level * 6271 + 137;
-}
-
 export default function App() {
   const { t, toggle: toggleLang } = useI18n();
   const [level, setLevel] = useState(0);
@@ -209,9 +206,19 @@ export default function App() {
     }
   }, [screen]);
   const [showSettings, setShowSettings] = useState(false);
-  const [savedLevel] = useState(() => {
-    const n = parseInt(localStorage.getItem("amaze:level"), 10);
-    return n > 0 ? n : 0;
+  const [showLevels, setShowLevels] = useState(false);
+  // Progression: `next` = furthest not-yet-completed level, `last` = last
+  // level actually played. Migrates the old single "amaze:level" key.
+  const [progress, setProgress] = useState(() => {
+    const read = (k) => {
+      const n = parseInt(localStorage.getItem(k), 10);
+      return n > 0 ? n : 0;
+    };
+    const legacy = read("amaze:level");
+    return {
+      next: read("amaze:levelNext") || legacy,
+      last: read("amaze:levelLast") || legacy,
+    };
   });
 
   const saveOps = useCallback((ops) => {
@@ -223,7 +230,8 @@ export default function App() {
   const beginLevel = useCallback((lvl, g) => {
     clearTimeout(winTimer.current);
     setLevel(lvl);
-    localStorage.setItem("amaze:level", String(lvl));
+    localStorage.setItem("amaze:levelLast", String(lvl));
+    setProgress((p) => ({ ...p, last: lvl }));
     setGame(g);
     setWon(false);
     setTopView(true);
@@ -283,8 +291,7 @@ export default function App() {
           });
       }
       if (e.code === "Space" && screen === "title") {
-        const lvl = savedLevel > 0 ? savedLevel : 0;
-        startLevel(lvl);
+        startLevel(progress.next);
       }
       if (e.code === "Space" && screen === "countdown") {
         setTopView(false);
@@ -293,7 +300,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [screen, topView, quizInfo, startLevel, t]);
+  }, [screen, topView, quizInfo, startLevel, t, progress.next]);
 
   // Countdown timer
   useEffect(() => {
@@ -476,6 +483,11 @@ export default function App() {
 
   const handleWin = useCallback(() => {
     playTreasureWin();
+    // Completing a level unlocks the next one
+    if (level + 1 > progress.next) {
+      localStorage.setItem("amaze:levelNext", String(level + 1));
+      setProgress((p) => ({ ...p, next: level + 1 }));
+    }
     setBurst({
       id: ++burstId.current,
       x: game.exitPos[0],
@@ -512,7 +524,7 @@ export default function App() {
       setScreen("won");
       setTopView(true);
     }, 2200);
-  }, [game, maxSteps, level]);
+  }, [game, maxSteps, level, progress.next]);
 
   const jumpToLevel = useCallback(
     (lvl) => {
@@ -633,7 +645,7 @@ export default function App() {
           >
             {t.instrExit}
           </p>
-          {savedLevel > 0 ? (
+          {progress.next > 0 || progress.last > 0 ? (
             <div
               style={{
                 display: "flex",
@@ -645,16 +657,16 @@ export default function App() {
               <button
                 className="btn btn-primary"
                 style={{ fontFamily: font, fontSize: 19 }}
-                onClick={() => startLevel(savedLevel)}
+                onClick={() => startLevel(progress.next)}
               >
-                {t.continueFrom(savedLevel + 1)}
+                {t.continueFrom(progress.next + 1)}
               </button>
               <button
                 className="btn btn-ghost"
                 style={{ fontFamily: font, fontSize: 15 }}
-                onClick={startGame}
+                onClick={() => setShowLevels(true)}
               >
-                {t.startFromBeginning}
+                {t.chooseLevel}
               </button>
             </div>
           ) : (
@@ -706,6 +718,17 @@ export default function App() {
             enabledOps={enabledOps}
             onSave={saveOps}
             onClose={() => setShowSettings(false)}
+          />
+        )}
+        {showLevels && (
+          <LevelPicker
+            maxLevel={progress.next}
+            lastPlayed={progress.last}
+            onPick={(lvl) => {
+              setShowLevels(false);
+              startLevel(lvl);
+            }}
+            onClose={() => setShowLevels(false)}
           />
         )}
         <GitHubLink />

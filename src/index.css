@@ -103,6 +103,28 @@ button {
   background: rgba(255, 255, 255, 0.13);
 }
 
+.level-card {
+  position: relative; /* anchors the floating NEW / LAST PLAYED badges */
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 8px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.level-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-soft);
+  background: rgba(255, 255, 255, 0.09);
+}
+.level-card:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
 .quiz-input {
   font-size: 36px;
   font-weight: 800;
