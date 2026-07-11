@@ -159,7 +159,10 @@ function moneyQuestion() {
 
 function clockQuestion() {
   const hour = randInt(1, 12);
-  return { kind: "clock", hour, answer: hour };
+  // Not just whole hours: halves often, quarters sometimes
+  const minutes = pick([0, 0, 30, 30, 15, 45]);
+  // Encoded H*100+M so the e2e harness can pass the answer as one number
+  return { kind: "clock", hour, minutes, answer: hour * 100 + minutes };
 }
 
 export function generateQuestion(enabled = ALL_TYPES) {

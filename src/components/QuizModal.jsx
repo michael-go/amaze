@@ -3,8 +3,10 @@ import { generateQuestion } from "../lib/quiz";
 import { useI18n } from "../lib/i18n";
 import { playQuizCorrect, playQuizWrong } from "../lib/sounds";
 
-function ClockFace({ hour }) {
-  const a = (((hour % 12) * 30 - 90) * Math.PI) / 180;
+function ClockFace({ hour, minutes = 0 }) {
+  // Hour hand advances with the minutes (3:30 points halfway between 3 and 4)
+  const ha = ((((hour % 12) + minutes / 60) * 30 - 90) * Math.PI) / 180;
+  const ma = ((minutes * 6 - 90) * Math.PI) / 180;
   const numbers = Array.from({ length: 12 }, (_, i) => {
     const ang = (((i + 1) * 30 - 90) * Math.PI) / 180;
     return { n: i + 1, x: 50 + 38 * Math.cos(ang), y: 50 + 38 * Math.sin(ang) };
@@ -24,6 +26,21 @@ function ClockFace({ hour }) {
         stroke="#ff6b35"
         strokeWidth="3"
       />
+      {/* minute ticks help read quarter/half hours */}
+      {Array.from({ length: 12 }, (_, i) => {
+        const ang = ((i * 30 - 90) * Math.PI) / 180;
+        return (
+          <line
+            key={i}
+            x1={50 + 43 * Math.cos(ang)}
+            y1={50 + 43 * Math.sin(ang)}
+            x2={50 + 46 * Math.cos(ang)}
+            y2={50 + 46 * Math.sin(ang)}
+            stroke="#c9a"
+            strokeWidth="1.5"
+          />
+        );
+      })}
       {numbers.map(({ n, x, y }) => (
         <text
           key={n}
@@ -41,8 +58,8 @@ function ClockFace({ hour }) {
       <line
         x1="50"
         y1="50"
-        x2="50"
-        y2="20"
+        x2={50 + 30 * Math.cos(ma)}
+        y2={50 + 30 * Math.sin(ma)}
         stroke="#888"
         strokeWidth="2.5"
         strokeLinecap="round"
@@ -50,8 +67,8 @@ function ClockFace({ hour }) {
       <line
         x1="50"
         y1="50"
-        x2={50 + 20 * Math.cos(a)}
-        y2={50 + 20 * Math.sin(a)}
+        x2={50 + 20 * Math.cos(ha)}
+        y2={50 + 20 * Math.sin(ha)}
         stroke="#222"
         strokeWidth="4"
         strokeLinecap="round"
@@ -118,7 +135,7 @@ function QuestionDisplay({ q, t }) {
     case "clock":
       return (
         <>
-          <ClockFace hour={q.hour} />
+          <ClockFace hour={q.hour} minutes={q.minutes} />
           <div style={styles.sentence} dir={t.dir}>
             {t.quizClock}
           </div>
@@ -138,9 +155,14 @@ export default function QuizModal({
   const { t } = useI18n();
   const [question] = useState(() => generateQuestion(enabledOps));
   const [input, setInput] = useState("");
+  const [input2, setInput2] = useState("");
   const [shake, setShake] = useState(false);
   const [wrong, setWrong] = useState(false);
   const inputRef = useRef();
+  const minutesRef = useRef();
+
+  // Clock answers are entered digital-style: hours and minutes fields
+  const isClock = question.kind === "clock";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -166,7 +188,11 @@ export default function QuizModal({
   }, [onCancel]);
 
   function submit() {
-    if (parseInt(input, 10) === question.answer) {
+    const correct = isClock
+      ? parseInt(input, 10) === question.hour &&
+        parseInt(input2, 10) === question.minutes
+      : parseInt(input, 10) === question.answer;
+    if (correct) {
       playQuizCorrect();
       onSuccess();
     } else {
@@ -174,12 +200,18 @@ export default function QuizModal({
       setShake(true);
       setWrong(true);
       setInput("");
+      setInput2("");
+      inputRef.current?.focus();
       setTimeout(() => setShake(false), 500);
     }
   }
 
   function onKeyDown(e) {
-    if (e.key === "Enter") submit();
+    if (e.key === "Enter") {
+      // On the clock's hours field, Enter moves on to the minutes
+      if (isClock && e.target === inputRef.current) minutesRef.current?.focus();
+      else submit();
+    }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
   }
 
@@ -200,19 +232,55 @@ export default function QuizModal({
         {wrong && (
           <div style={{ ...styles.wrong, fontSize: 16 }}>{t.wrongAnswer}</div>
         )}
-        <input
-          ref={inputRef}
-          type="number"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setWrong(false);
-          }}
-          onKeyDown={onKeyDown}
-          className="quiz-input"
-          style={styles.input}
-          placeholder=""
-        />
+        {isClock ? (
+          <div style={styles.clockRow}>
+            <input
+              ref={inputRef}
+              type="number"
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setWrong(false);
+                // Hours are 1-12: a second digit or 2-9 means it's complete
+                const v = e.target.value;
+                if (v.length >= 2 || (v.length === 1 && parseInt(v, 10) >= 2))
+                  minutesRef.current?.focus();
+              }}
+              onKeyDown={onKeyDown}
+              className="quiz-input"
+              style={styles.clockInput}
+              placeholder="––"
+            />
+            <span style={styles.clockColon}>:</span>
+            <input
+              ref={minutesRef}
+              type="number"
+              value={input2}
+              onChange={(e) => {
+                setInput2(e.target.value);
+                setWrong(false);
+              }}
+              onKeyDown={onKeyDown}
+              className="quiz-input"
+              style={styles.clockInput}
+              placeholder="––"
+            />
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="number"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setWrong(false);
+            }}
+            onKeyDown={onKeyDown}
+            className="quiz-input"
+            style={styles.input}
+            placeholder=""
+          />
+        )}
         <div style={styles.buttons}>
           <button
             className="btn btn-primary"
@@ -310,6 +378,22 @@ const styles = {
   },
   input: {
     marginBottom: 24,
+  },
+  clockRow: {
+    direction: "ltr", // digital time reads hours:minutes even in Hebrew
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 24,
+  },
+  clockInput: {
+    width: 92,
+  },
+  clockColon: {
+    fontSize: 40,
+    fontWeight: 800,
+    color: "var(--text-dim)",
   },
   buttons: {
     display: "flex",

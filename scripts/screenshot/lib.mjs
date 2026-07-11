@@ -141,11 +141,22 @@ export async function readQuizAnswer(page) {
 }
 
 export async function answerQuiz(page, value) {
-  const input = await page.$("input[type=number]");
-  if (!input) throw new Error("No quiz input on screen");
-  await input.click({ clickCount: 3 });
-  await input.type(String(value));
-  await input.press("Enter");
+  const inputs = await page.$$("input[type=number]");
+  if (!inputs.length) throw new Error("No quiz input on screen");
+  if (inputs.length === 2) {
+    // Clock question: two H:MM fields, value encoded as hours*100+minutes
+    const h = Math.floor(value / 100);
+    const m = value % 100;
+    await inputs[0].click({ clickCount: 3 });
+    await inputs[0].type(String(h));
+    await inputs[1].click({ clickCount: 3 });
+    await inputs[1].type(String(m));
+    await inputs[1].press("Enter");
+  } else {
+    await inputs[0].click({ clickCount: 3 });
+    await inputs[0].type(String(value));
+    await inputs[0].press("Enter");
+  }
   await sleep(800);
 }
 
