@@ -367,7 +367,11 @@ function decalHash(x, z) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-export function WallDecals({ wallBoxes, game }) {
+// Proximity glow: drawings light up as the player approaches them
+const GLOW_FAR = 14; // starts brightening inside this distance (~3.5 cells)
+const GLOW_NEAR = 3; // fully lit here
+
+export function WallDecals({ wallBoxes, game, playerPos }) {
   const geo = useMemo(
     () => new THREE.PlaneGeometry(DECAL_SIZE, DECAL_SIZE),
     [],
@@ -485,8 +489,28 @@ export function WallDecals({ wallBoxes, game }) {
     return out;
   }, [wallBoxes, game.width, game.height, game.mask]);
 
+  // Each motif appears at most once per level, so its per-kind material is
+  // effectively per-decal and safe to animate per mesh.
+  const groupRef = useRef();
+  useFrame(({ clock }) => {
+    if (!groupRef.current || !playerPos) return;
+    const p = playerPos.current;
+    const pulse = 0.85 + Math.sin(clock.elapsedTime * 3) * 0.15;
+    for (const mesh of groupRef.current.children) {
+      const dx = mesh.position.x - p.x;
+      const dz = mesh.position.z - p.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const t = Math.min(
+        1,
+        Math.max(0, (GLOW_FAR - dist) / (GLOW_FAR - GLOW_NEAR)),
+      );
+      mesh.material.emissiveIntensity = 0.16 + t * 1.6 * pulse;
+      mesh.material.opacity = 0.8 + t * 0.2;
+    }
+  });
+
   return (
-    <group>
+    <group ref={groupRef}>
       {decals.map((d, i) => (
         <mesh
           key={i}

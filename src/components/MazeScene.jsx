@@ -411,7 +411,7 @@ export default function MazeScene({
         topView={topView}
         game={game}
       />
-      <WallDecals wallBoxes={wallBoxes} game={game} />
+      <WallDecals wallBoxes={wallBoxes} game={game} playerPos={playerPos} />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       {magicItems &&
