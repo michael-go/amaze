@@ -615,24 +615,62 @@ function PlayerIndicator({ playerPos, yaw }) {
     groupRef.current.rotation.y = yaw.current;
   });
 
-  const shape = useMemo(() => {
+  // The view cone is a flashlight-style beam: brightest at the feet and
+  // fading out with distance, with a rounded far edge — a hard wide edge
+  // there made the old triangle read as an arrow pointing backward.
+  const beamMat = useMemo(() => {
+    const S = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = S;
+    canvas.height = S;
+    const ctx = canvas.getContext("2d");
+    const apexX = S / 2;
+    const apexY = S;
+    const r = S * 0.98;
+    const half = Math.PI * 0.13; // ~23° half-angle, same spread as before
+    const grad = ctx.createRadialGradient(apexX, apexY, 0, apexX, apexY, r);
+    grad.addColorStop(0, "rgba(255, 204, 68, 0.4)");
+    grad.addColorStop(0.5, "rgba(255, 204, 68, 0.18)");
+    grad.addColorStop(1, "rgba(255, 204, 68, 0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(apexX, apexY);
+    ctx.arc(apexX, apexY, r, -Math.PI / 2 - half, -Math.PI / 2 + half);
+    ctx.closePath();
+    ctx.fill();
+    const tex = new THREE.CanvasTexture(canvas);
+    return new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+  }, []);
+
+  // Small dart at the feet that unambiguously points where the kid looks
+  const arrowShape = useMemo(() => {
     const s = new THREE.Shape();
-    // Narrow end at player feet, fans out in facing direction
-    s.moveTo(0, 0); // narrow tip (at player feet)
-    s.lineTo(-0.8, 1.8); // forward left
-    s.lineTo(0.8, 1.8); // forward right
+    s.moveTo(0, 0.55); // tip, forward
+    s.lineTo(0.3, -0.2); // back right
+    s.lineTo(0, -0.02); // tail notch
+    s.lineTo(-0.3, -0.2); // back left
     s.closePath();
     return s;
   }, []);
 
   return (
     <group ref={groupRef}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <shapeGeometry args={[shape]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1]}>
+        <planeGeometry args={[2, 2]} />
+        <primitive object={beamMat} attach="material" />
+      </mesh>
+      {/* pushed forward so the kid's body doesn't cover it */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, -0.8]}>
+        <shapeGeometry args={[arrowShape]} />
         <meshBasicMaterial
           color="#ffcc44"
           transparent
-          opacity={0.5}
+          opacity={0.85}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
