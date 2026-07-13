@@ -290,6 +290,9 @@ export default function App() {
             prompt: t.quizMapPrompt,
           });
       }
+      if (e.code === "Escape" && screen === "playing" && topView && !quizInfo) {
+        setTopView(false);
+      }
       if (e.code === "Space" && screen === "title") {
         startLevel(progress.next);
       }
