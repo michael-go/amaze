@@ -28,6 +28,7 @@ import {
 import { createRng } from "../lib/rng";
 import DebugPanel from "./DebugPanel";
 import SettingsModal from "./SettingsModal";
+import ConfirmModal from "./ConfirmModal";
 import LevelPicker from "./LevelPicker";
 import { ALL_TYPES } from "../lib/quiz";
 import { ITEM_COLORS } from "./MagicItem";
@@ -165,6 +166,7 @@ export default function App() {
     newGame(0, defaultMazeSeed(0), defaultItemsSeed(0)),
   );
   const [topView, setTopView] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
   const [won, setWon] = useState(false);
   const [screen, setScreen] = useState("title"); // 'title' | 'countdown' | 'playing' | 'won'
   const [countdown, setCountdown] = useState(0);
@@ -290,7 +292,13 @@ export default function App() {
             prompt: t.quizMapPrompt,
           });
       }
-      if (e.code === "Escape" && screen === "playing" && topView && !quizInfo) {
+      if (
+        e.code === "Escape" &&
+        screen === "playing" &&
+        topView &&
+        !quizInfo &&
+        !confirmExit
+      ) {
         setTopView(false);
       }
       if (e.code === "Space" && screen === "title") {
@@ -303,7 +311,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [screen, topView, quizInfo, startLevel, t, progress.next]);
+  }, [screen, topView, quizInfo, confirmExit, startLevel, t, progress.next]);
 
   // Countdown timer
   useEffect(() => {
@@ -766,7 +774,9 @@ export default function App() {
         gl={{ antialias: false }}
         // Stop redrawing entirely while a modal or the win screen covers the
         // frozen scene — otherwise the GPU renders it flat-out at 60fps.
-        frameloop={quizInfo || screen === "won" ? "demand" : "always"}
+        frameloop={
+          quizInfo || confirmExit || screen === "won" ? "demand" : "always"
+        }
         style={{ background: "#0a0a0a" }}
         camera={topView ? undefined : { fov: 75, near: 0.5, far: 200 }}
       >
@@ -779,7 +789,8 @@ export default function App() {
           frozen={
             screen === "countdown" ||
             (stepsRemaining <= 0 && screen === "playing") ||
-            !!quizInfo
+            !!quizInfo ||
+            confirmExit
           }
           onStepUsed={onStepUsed}
           magicItems={magicItems}
@@ -807,6 +818,7 @@ export default function App() {
                 prompt: t.quizMapPrompt,
               })
         }
+        onExit={() => setConfirmExit(true)}
         won={won}
         stepsRemaining={stepsRemaining}
         maxSteps={maxSteps}
@@ -834,6 +846,20 @@ export default function App() {
               : undefined
           }
           prompt={quizInfo.prompt}
+        />
+      )}
+
+      {confirmExit && (
+        <ConfirmModal
+          prompt={t.exitConfirmPrompt}
+          confirmLabel={t.exitToTitle}
+          onConfirm={() => {
+            setConfirmExit(false);
+            setQuizInfo(null);
+            setTopView(false);
+            setScreen("title");
+          }}
+          onCancel={() => setConfirmExit(false)}
         />
       )}
 

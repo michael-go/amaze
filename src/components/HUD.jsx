@@ -6,6 +6,7 @@ export default function HUD({
   level,
   topView,
   onToggleView,
+  onExit,
   won,
   stepsRemaining,
   maxSteps,
@@ -103,7 +104,14 @@ export default function HUD({
           )}
         </div>
       </div>
-      <div style={styles.right}>
+      {/* Anchored to the screen's right edge; in RTL flex-end means left,
+          so flip it to keep the buttons right-aligned in both languages */}
+      <div
+        style={{
+          ...styles.right,
+          alignItems: t.dir === "rtl" ? "flex-start" : "flex-end",
+        }}
+      >
         <button
           className="btn btn-ghost"
           style={styles.viewBtn}
@@ -111,6 +119,15 @@ export default function HUD({
         >
           {topView ? t.firstPerson : t.topView}
         </button>
+        {!won && (
+          <button
+            className="btn btn-ghost"
+            style={styles.viewBtn}
+            onClick={onExit}
+          >
+            {t.exitToTitle}
+          </button>
+        )}
         {/* Minimap lives under the view button; the top view IS the map */}
         {mapActive && !topView && !won && (
           <MiniMap game={game} playerInfoRef={playerInfoRef} />
