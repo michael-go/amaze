@@ -7,7 +7,7 @@ import {
   useRef,
   useMemo,
 } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import MazeScene from "./MazeScene";
 import HUD from "./HUD";
 import { useI18n } from "../lib/i18n";
@@ -52,6 +52,61 @@ const SettingsModal = lazy(() => import("./SettingsModal"));
 const ConfirmModal = lazy(() => import("./ConfirmModal"));
 const LevelPicker = lazy(() => import("./LevelPicker"));
 const DEBUG_ENABLED = window.location.hash.includes("debug");
+
+const ACTIVE_FPS = 60;
+const IDLE_FPS = 24;
+const IDLE_AFTER_MS = 1800;
+
+function AdaptiveFrameLoop({ paused }) {
+  const advance = useThree((state) => state.advance);
+  const activeUntil = useRef(performance.now() + IDLE_AFTER_MS);
+  const pressedKeys = useRef(new Set());
+
+  useEffect(() => {
+    const markActive = () => {
+      activeUntil.current = performance.now() + IDLE_AFTER_MS;
+    };
+    const onKeyDown = (event) => {
+      pressedKeys.current.add(event.code);
+      markActive();
+    };
+    const onKeyUp = (event) => {
+      pressedKeys.current.delete(event.code);
+      markActive();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("pointerdown", markActive);
+    window.addEventListener("touchstart", markActive, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("pointerdown", markActive);
+      window.removeEventListener("touchstart", markActive);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (paused) return;
+    let raf = 0;
+    let lastFrame = 0;
+    const tick = (now) => {
+      raf = requestAnimationFrame(tick);
+      const active = pressedKeys.current.size > 0 || now < activeUntil.current;
+      const interval = 1000 / (active ? ACTIVE_FPS : IDLE_FPS);
+      if (now - lastFrame < interval) return;
+      lastFrame = now - ((now - lastFrame) % interval);
+      // R3F's manual clock uses seconds, while requestAnimationFrame supplies
+      // milliseconds. Passing milliseconds makes every delta hit the movement
+      // clamp and causes speed to depend on the chosen frame rate.
+      advance(now / 1000, true);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [advance, paused]);
+
+  return null;
+}
 
 function newGame(level, mazeSeed, itemsSeed) {
   // Maze structure RNG
@@ -795,19 +850,21 @@ export default function App() {
       <Canvas
         shadows
         // Cap resolution on high-DPI screens: 2-3x DPR with bloom is the
-        // single biggest GPU cost, and 1.5x is visually indistinguishable
+        // single biggest GPU cost, and 1.25x remains crisp while materially
+        // reducing the number of shaded pixels.
         // in a moving 3D scene (DOM UI stays crisp regardless).
-        dpr={[1, 1.5]}
+        dpr={[1, 1.25]}
         // The EffectComposer does its own MSAA; context AA would be paid twice.
         gl={{ antialias: false }}
-        // Stop redrawing entirely while a modal or the win screen covers the
-        // frozen scene — otherwise the GPU renders it flat-out at 60fps.
-        frameloop={
-          quizInfo || confirmExit || screen === "won" ? "demand" : "always"
-        }
+        // A custom driver caps high-refresh displays at 60fps and drops to
+        // 24fps while idle instead of rendering flat-out at the display rate.
+        frameloop="never"
         style={{ background: "#0a0a0a" }}
         camera={topView ? undefined : { fov: 75, near: 0.5, far: 200 }}
       >
+        <AdaptiveFrameLoop
+          paused={!!quizInfo || confirmExit || screen === "won"}
+        />
         <MazeScene
           game={game}
           level={level}

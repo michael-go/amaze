@@ -469,9 +469,9 @@ export default function MazeScene({
         <PickupBurst key={burst.id} burst={burst} onDone={onBurstDone} />
       )}
 
-      {/* 2x MSAA is plenty here and half the price of 4x (the composer is
-          the only AA pass — the GL context itself runs with antialias off) */}
-      <EffectComposer multisampling={2}>
+      {/* DPR provides enough edge smoothing for this scene. Avoiding a second
+          multisampled composer target saves GPU bandwidth on every frame. */}
+      <EffectComposer multisampling={0}>
         <Bloom
           mipmapBlur
           intensity={0.8}

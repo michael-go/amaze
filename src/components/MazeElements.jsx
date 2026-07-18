@@ -139,8 +139,8 @@ export function KeyLight({ playerPos }) {
       castShadow
       intensity={1.5}
       color="#b9c8ff"
-      shadow-mapSize-width={1024}
-      shadow-mapSize-height={1024}
+      shadow-mapSize-width={512}
+      shadow-mapSize-height={512}
       shadow-camera-left={-16}
       shadow-camera-right={16}
       shadow-camera-top={16}
