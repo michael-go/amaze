@@ -1,8 +1,15 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
 import { Canvas } from "@react-three/fiber";
 import MazeScene from "./MazeScene";
 import HUD from "./HUD";
-import QuizModal from "./QuizModal";
 import { useI18n } from "../lib/i18n";
 import TouchControls from "./TouchControls";
 import {
@@ -26,10 +33,6 @@ import {
   defaultItemsSeed,
 } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
-import DebugPanel from "./DebugPanel";
-import SettingsModal from "./SettingsModal";
-import ConfirmModal from "./ConfirmModal";
-import LevelPicker from "./LevelPicker";
 import { ALL_TYPES } from "../lib/quiz";
 import { ITEM_COLORS } from "./MagicItem";
 import {
@@ -39,6 +42,16 @@ import {
   playCountdownGo,
   playFlyWhoosh,
 } from "../lib/sounds";
+
+// These screens are not needed for the first render. In particular, keeping
+// DebugPanel lazy prevents the sizeable Leva dependency from entering the
+// production startup bundle for normal players.
+const QuizModal = lazy(() => import("./QuizModal"));
+const DebugPanel = lazy(() => import("./DebugPanel"));
+const SettingsModal = lazy(() => import("./SettingsModal"));
+const ConfirmModal = lazy(() => import("./ConfirmModal"));
+const LevelPicker = lazy(() => import("./LevelPicker"));
+const DEBUG_ENABLED = window.location.hash.includes("debug");
 
 function newGame(level, mazeSeed, itemsSeed) {
   // Maze structure RNG
@@ -168,7 +181,7 @@ export default function App() {
   const [topView, setTopView] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const [won, setWon] = useState(false);
-  const [screen, setScreen] = useState("title"); // 'title' | 'countdown' | 'playing' | 'won'
+  const [screen, setScreen] = useState("title"); // 'title' | 'loading' | 'countdown' | 'playing' | 'won'
   const [countdown, setCountdown] = useState(0);
   const [quizInfo, setQuizInfo] = useState(null); // { onSuccess, onCancel?, prompt? }
   const [maxSteps, setMaxSteps] = useState(0);
@@ -238,7 +251,7 @@ export default function App() {
     setWon(false);
     setTopView(true);
     setCountdown(10);
-    setScreen("countdown");
+    setScreen("loading");
     // Steps proportional to valid cell count, scaled by level config
     const config = getLevelConfig(lvl);
     const validCells = g.mask
@@ -463,6 +476,13 @@ export default function App() {
   const onPowerEnd = useCallback(() => {
     setActivePower(null);
     setPowerSecs(0);
+  }, []);
+
+  const onSceneReady = useCallback(() => {
+    // MazeScene calls this after its first frame with the new level mounted.
+    // Only then does memorization time begin.
+    setCountdown(10);
+    setScreen((current) => (current === "loading" ? "countdown" : current));
   }, []);
 
   const debugSpawnItem = useCallback((type) => {
@@ -725,32 +745,40 @@ export default function App() {
           </div>
         </div>
         {showSettings && (
-          <SettingsModal
-            enabledOps={enabledOps}
-            onSave={saveOps}
-            onClose={() => setShowSettings(false)}
-          />
+          <Suspense fallback={null}>
+            <SettingsModal
+              enabledOps={enabledOps}
+              onSave={saveOps}
+              onClose={() => setShowSettings(false)}
+            />
+          </Suspense>
         )}
         {showLevels && (
-          <LevelPicker
-            maxLevel={progress.next}
-            lastPlayed={progress.last}
-            onPick={(lvl) => {
-              setShowLevels(false);
-              startLevel(lvl);
-            }}
-            onClose={() => setShowLevels(false)}
-          />
+          <Suspense fallback={null}>
+            <LevelPicker
+              maxLevel={progress.next}
+              lastPlayed={progress.last}
+              onPick={(lvl) => {
+                setShowLevels(false);
+                startLevel(lvl);
+              }}
+              onClose={() => setShowLevels(false)}
+            />
+          </Suspense>
         )}
         <GitHubLink />
-        <DebugPanel
-          level={level}
-          onJumpToLevel={jumpToLevel}
-          onSpawnItem={debugSpawnItem}
-          mazeSeed={mazeSeed}
-          itemsSeed={itemsSeed}
-          onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
-        />
+        {DEBUG_ENABLED && (
+          <Suspense fallback={null}>
+            <DebugPanel
+              level={level}
+              onJumpToLevel={jumpToLevel}
+              onSpawnItem={debugSpawnItem}
+              mazeSeed={mazeSeed}
+              itemsSeed={itemsSeed}
+              onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
+            />
+          </Suspense>
+        )}
       </div>
     );
   }
@@ -787,6 +815,7 @@ export default function App() {
           onWin={handleWin}
           won={won}
           frozen={
+            screen === "loading" ||
             screen === "countdown" ||
             (stepsRemaining <= 0 && screen === "playing") ||
             !!quizInfo ||
@@ -803,6 +832,7 @@ export default function App() {
           playerInfoRef={playerInfoRef}
           burst={burst}
           onBurstDone={() => setBurst(null)}
+          onReady={onSceneReady}
         />
       </Canvas>
 
@@ -831,44 +861,62 @@ export default function App() {
       />
 
       {quizInfo && (
-        <QuizModal
-          enabledOps={enabledOps}
-          onSuccess={() => {
-            quizInfo.onSuccess();
-            setQuizInfo(null);
-          }}
-          onCancel={
-            quizInfo.canCancel
-              ? () => {
-                  quizInfo.onCancel?.();
-                  setQuizInfo(null);
-                }
-              : undefined
-          }
-          prompt={quizInfo.prompt}
-        />
+        <Suspense fallback={null}>
+          <QuizModal
+            enabledOps={enabledOps}
+            onSuccess={() => {
+              quizInfo.onSuccess();
+              setQuizInfo(null);
+            }}
+            onCancel={
+              quizInfo.canCancel
+                ? () => {
+                    quizInfo.onCancel?.();
+                    setQuizInfo(null);
+                  }
+                : undefined
+            }
+            prompt={quizInfo.prompt}
+          />
+        </Suspense>
       )}
 
       {confirmExit && (
-        <ConfirmModal
-          prompt={t.exitConfirmPrompt}
-          confirmLabel={t.exitToTitle}
-          onConfirm={() => {
-            setConfirmExit(false);
-            setQuizInfo(null);
-            setTopView(false);
-            setScreen("title");
-          }}
-          onCancel={() => setConfirmExit(false)}
-        />
+        <Suspense fallback={null}>
+          <ConfirmModal
+            prompt={t.exitConfirmPrompt}
+            confirmLabel={t.exitToTitle}
+            onConfirm={() => {
+              setConfirmExit(false);
+              setQuizInfo(null);
+              setTopView(false);
+              setScreen("title");
+            }}
+            onCancel={() => setConfirmExit(false)}
+          />
+        </Suspense>
       )}
 
       {showSettings && (
-        <SettingsModal
-          enabledOps={enabledOps}
-          onSave={saveOps}
-          onClose={() => setShowSettings(false)}
-        />
+        <Suspense fallback={null}>
+          <SettingsModal
+            enabledOps={enabledOps}
+            onSave={saveOps}
+            onClose={() => setShowSettings(false)}
+          />
+        </Suspense>
+      )}
+
+      {screen === "loading" && (
+        <div
+          style={styles.countdownOverlay}
+          aria-live="polite"
+          aria-label={t.loadingMaze}
+        >
+          <div style={{ ...styles.countdownText, fontFamily: font }}>
+            {t.loadingMaze}
+          </div>
+        </div>
       )}
 
       {screen === "countdown" && (
@@ -976,14 +1024,18 @@ export default function App() {
       </button>
       <TouchControls />
       <GitHubLink />
-      <DebugPanel
-        level={level}
-        onJumpToLevel={jumpToLevel}
-        onSpawnItem={debugSpawnItem}
-        mazeSeed={mazeSeed}
-        itemsSeed={itemsSeed}
-        onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
-      />
+      {DEBUG_ENABLED && (
+        <Suspense fallback={null}>
+          <DebugPanel
+            level={level}
+            onJumpToLevel={jumpToLevel}
+            onSpawnItem={debugSpawnItem}
+            mazeSeed={mazeSeed}
+            itemsSeed={itemsSeed}
+            onSeedsChange={(ms, is_) => startLevel(level, ms, is_)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

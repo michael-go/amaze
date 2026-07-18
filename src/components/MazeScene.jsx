@@ -63,6 +63,7 @@ export default function MazeScene({
   playerInfoRef,
   burst,
   onBurstDone,
+  onReady,
 }) {
   // Stable identity across re-renders (steps re-render the scene); otherwise
   // the wall textures would regenerate every frame the player moves.
@@ -80,13 +81,41 @@ export default function MazeScene({
   const playerY = useRef(0);
   const skipCleared = useRef(false);
   const bumpCooldown = useRef(0);
+  const readyGame = useRef(null);
 
   const wallBoxes = useMemo(
     () => getWallBoxes(game.cells, game.mask),
     [game.cells, game.mask],
   );
-  const wallBoxesRef = useRef(wallBoxes);
-  wallBoxesRef.current = wallBoxes;
+  // Spatially bucket the expanded wall bounds. Movement and camera collision
+  // checks are called several times per frame; looking only in the queried
+  // cell keeps that work constant as late-game mazes grow.
+  const collisionBuckets = useMemo(() => {
+    const buckets = new Map();
+    for (const box of wallBoxes) {
+      const minX = Math.floor(
+        (box.cx - box.width / 2 - PLAYER_RADIUS) / CELL_SIZE,
+      );
+      const maxX = Math.floor(
+        (box.cx + box.width / 2 + PLAYER_RADIUS) / CELL_SIZE,
+      );
+      const minZ = Math.floor(
+        (box.cz - box.depth / 2 - PLAYER_RADIUS) / CELL_SIZE,
+      );
+      const maxZ = Math.floor(
+        (box.cz + box.depth / 2 + PLAYER_RADIUS) / CELL_SIZE,
+      );
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          const key = `${x},${z}`;
+          const bucket = buckets.get(key);
+          if (bucket) bucket.push(box);
+          else buckets.set(key, [box]);
+        }
+      }
+    }
+    return buckets;
+  }, [wallBoxes]);
 
   // Trail: track visited cells
   const [visitedCells, setVisitedCells] = useState(() => new Set());
@@ -133,7 +162,10 @@ export default function MazeScene({
 
   function collidesWithWall(nx, nz) {
     if (isVoid(nx, nz)) return true;
-    for (const box of wallBoxesRef.current) {
+    const key = `${Math.floor(nx / CELL_SIZE)},${Math.floor(nz / CELL_SIZE)}`;
+    const nearbyWalls = collisionBuckets.get(key);
+    if (!nearbyWalls) return false;
+    for (const box of nearbyWalls) {
       const hw = box.width / 2 + PLAYER_RADIUS;
       const hd = box.depth / 2 + PLAYER_RADIUS;
       if (
@@ -151,6 +183,10 @@ export default function MazeScene({
     // Clamp delta so a tab switch / GC hitch can't tunnel the player
     // through a wall or overshoot the camera lerps
     delta = Math.min(delta, 0.05);
+    if (readyGame.current !== game) {
+      readyGame.current = game;
+      onReady?.();
+    }
     const pos = playerPos.current;
     if (playerInfoRef) {
       // Mutate in place — allocating a fresh object every frame adds GC churn
