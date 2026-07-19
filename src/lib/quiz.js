@@ -141,20 +141,61 @@ function fractionQuestion() {
 }
 
 function moneyQuestion() {
+  // Work in tenths to avoid floating-point arithmetic while generating values.
+  // Fractional prices use elementary-friendly 10-cent/agorot steps.
+  const withChange = (min, max) => {
+    let units;
+    do units = randInt(min, max);
+    while (units % 10 === 0);
+    return units;
+  };
+  const whole = (min, max) =>
+    randInt(Math.ceil(min / 10), Math.floor(max / 10)) * 10;
+  const amountPair = (
+    minForFirst,
+    maxForFirst,
+    minForSecond,
+    maxForSecond,
+    ordered = false,
+  ) => {
+    const pattern = pick(["bothChange", "oneWhole", "bothWhole"]);
+    const firstIsWhole =
+      pattern === "bothWhole" ||
+      (pattern === "oneWhole" && Math.random() < 0.5);
+    const secondIsWhole =
+      pattern === "bothWhole" || (pattern === "oneWhole" && !firstIsWhole);
+    const first = (firstIsWhole ? whole : withChange)(minForFirst, maxForFirst);
+    const secondMax = ordered
+      ? Math.min(maxForSecond, first - 1)
+      : maxForSecond;
+    const second = (secondIsWhole ? whole : withChange)(
+      minForSecond,
+      secondMax,
+    );
+    return [first, second];
+  };
+  const format = Math.random() < 0.5 ? "words" : "decimal";
+
   if (Math.random() < 0.5) {
-    const have = randInt(5, 20);
-    const cost = randInt(1, have - 1);
+    const [have, cost] = amountPair(51, 200, 11, 100, true);
     return {
       kind: "money",
       mode: "left",
-      x: have,
-      y: cost,
-      answer: have - cost,
+      format,
+      x: have / 10,
+      y: cost / 10,
+      answer: (have - cost) / 10,
     };
   }
-  const a = randInt(2, 10);
-  const b = randInt(2, 10);
-  return { kind: "money", mode: "total", x: a, y: b, answer: a + b };
+  const [a, b] = amountPair(21, 100, 21, 100);
+  return {
+    kind: "money",
+    mode: "total",
+    format,
+    x: a / 10,
+    y: b / 10,
+    answer: (a + b) / 10,
+  };
 }
 
 function clockQuestion() {

@@ -1,5 +1,16 @@
 import { createContext, useContext, useState, useCallback } from "react";
 
+const formatMoney = (amount, lang, format = "decimal") => {
+  const [whole, cents] = amount.toFixed(2).split(".");
+  if (lang === "he" && format === "words")
+    return cents === "00"
+      ? `${whole} שקלים`
+      : `${whole} שקלים ו־${cents} אגורות`;
+  const value = cents === "00" ? whole : `${whole}.${cents}`;
+  if (lang === "he") return `${value} ₪`;
+  return `$${value}`;
+};
+
 const strings = {
   he: {
     title: "AMAZE",
@@ -54,9 +65,10 @@ const strings = {
     fracThird: "שליש",
     fracQuarter: "רבע",
     quizFraction: (frac, n) => `${frac} מ-${n}?`,
-    quizMoneyLeft: (have, cost) =>
-      `יש לכם ${have} ₪ וקניתם חטיף ב-${cost} ₪. כמה כסף נשאר?`,
-    quizMoneyTotal: (a, b) => `צעצוע עולה ${a} ₪ ומדבקה עולה ${b} ₪. כמה ביחד?`,
+    quizMoneyLeft: (have, cost, format) =>
+      `יש לכם ${formatMoney(have, "he", format)} וקניתם חטיף ב־${formatMoney(cost, "he", format)}. כמה כסף נשאר?`,
+    quizMoneyTotal: (a, b, format) =>
+      `צעצוע עולה ${formatMoney(a, "he", format)} ומדבקה עולה ${formatMoney(b, "he", format)}. כמה ביחד?`,
     quizClock: "מה השעה?",
     sound: "צלילים",
     save: "שמירה",
@@ -131,9 +143,9 @@ const strings = {
     fracQuarter: "A quarter",
     quizFraction: (frac, n) => `${frac} of ${n}?`,
     quizMoneyLeft: (have, cost) =>
-      `You have $${have} and buy a snack for $${cost}. How much is left?`,
+      `You have ${formatMoney(have, "en")} and buy a snack for ${formatMoney(cost, "en")}. How much is left?`,
     quizMoneyTotal: (a, b) =>
-      `A toy costs $${a} and a sticker costs $${b}. How much together?`,
+      `A toy costs ${formatMoney(a, "en")} and a sticker costs ${formatMoney(b, "en")}. How much together?`,
     quizClock: "What time is it?",
     sound: "SOUND",
     save: "SAVE",

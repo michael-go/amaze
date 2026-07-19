@@ -128,8 +128,8 @@ function QuestionDisplay({ q, t }) {
       return (
         <div style={styles.story} dir={t.dir}>
           {q.mode === "left"
-            ? t.quizMoneyLeft(q.x, q.y)
-            : t.quizMoneyTotal(q.x, q.y)}
+            ? t.quizMoneyLeft(q.x, q.y, q.format)
+            : t.quizMoneyTotal(q.x, q.y, q.format)}
         </div>
       );
     case "clock":
@@ -191,7 +191,10 @@ export default function QuizModal({
     const correct = isClock
       ? parseInt(input, 10) === question.hour &&
         parseInt(input2, 10) === question.minutes
-      : parseInt(input, 10) === question.answer;
+      : question.kind === "money"
+        ? Math.round(parseFloat(input) * 100) ===
+          Math.round(question.answer * 100)
+        : parseInt(input, 10) === question.answer;
     if (correct) {
       playQuizCorrect();
       onSuccess();
@@ -270,6 +273,8 @@ export default function QuizModal({
           <input
             ref={inputRef}
             type="number"
+            step={question.kind === "money" ? "0.1" : "1"}
+            inputMode={question.kind === "money" ? "decimal" : "numeric"}
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
