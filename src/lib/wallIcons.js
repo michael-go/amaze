@@ -184,46 +184,166 @@ const DRAW = {
     ctx.fill();
   },
   butterfly(ctx) {
+    // Broad, swept forewings and rounder hindwings give this a recognizable
+    // butterfly silhouette. Each side is drawn separately so the markings
+    // follow the shape of the wing instead of floating inside an ellipse.
     for (const sx of [-1, 1]) {
+      const side = sx === -1 ? -2 : 2;
+      ctx.save();
+      ctx.translate(C, C);
+      ctx.scale(sx, 1);
+
+      // Forewing
       ctx.beginPath();
-      ctx.ellipse(C + sx * 40, C - 26, 34, 30, 0, 0, TAU);
-      ctx.fillStyle = "#b58cff";
+      ctx.moveTo(7, -34);
+      ctx.bezierCurveTo(24, -68, 62, -92 + side, 88, -75);
+      ctx.bezierCurveTo(104, -60, 91, -25, 57, 1);
+      ctx.bezierCurveTo(39, 14, 21, 9, 9, -2);
+      ctx.closePath();
+      ctx.fillStyle = "#f18a2f";
       ctx.fill();
       stroke(ctx, 7);
+
+      // Hindwing
       ctx.beginPath();
-      ctx.ellipse(C + sx * 34, C + 34, 28, 26, 0, 0, TAU);
-      ctx.fillStyle = "#b58cff";
+      ctx.moveTo(9, -2);
+      ctx.bezierCurveTo(31, 4, 64, 11 + side, 72, 35);
+      ctx.bezierCurveTo(80, 58, 62, 79, 39, 72);
+      ctx.bezierCurveTo(20, 67, 10, 44, 7, 18);
+      ctx.closePath();
+      ctx.fillStyle = "#dc6b24";
       ctx.fill();
       stroke(ctx, 7);
+
+      // Wing veins
+      ctx.strokeStyle = "rgba(49,35,24,0.82)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(10, -22);
+      ctx.bezierCurveTo(35, -35, 61, -55, 84, -70);
+      ctx.moveTo(18, -13);
+      ctx.bezierCurveTo(45, -10, 67, -19, 91, -34);
+      ctx.moveTo(13, 8);
+      ctx.bezierCurveTo(37, 25, 52, 45, 59, 67);
+      ctx.moveTo(12, 18);
+      ctx.bezierCurveTo(31, 36, 36, 55, 38, 70);
+      ctx.stroke();
+
+      // Cream spots against the dark outer margins echo a monarch's
+      // high-contrast wing pattern without losing the hand-painted style.
+      ctx.fillStyle = "rgba(255,241,203,0.92)";
+      for (const [x, y, rx, ry, angle] of [
+        [66, -70 + side, 8, 5, -0.35],
+        [83, -54, 7, 4, 0.2],
+        [76, -29, 6, 4, 0.55],
+        [66, 33 + side, 5, 4, 0.65],
+        [67, 48 + side, 5, 4, 0.2],
+        [57, 63 + side, 5, 4, -0.35],
+      ]) {
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, angle, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
     }
-    ctx.beginPath();
-    ctx.ellipse(C, C, 9, 46, 0, 0, TAU);
-    ctx.fillStyle = "#5a3aa0";
-    ctx.fill();
-    stroke(ctx, 6);
+
+    // Curled, club-tipped antennae.
     ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(C, C - 44);
-    ctx.lineTo(C - 16, C - 66);
-    ctx.moveTo(C, C - 44);
-    ctx.lineTo(C + 16, C - 66);
+    ctx.moveTo(C - 4, C - 48);
+    ctx.bezierCurveTo(C - 12, C - 67, C - 31, C - 72, C - 38, C - 84);
+    ctx.moveTo(C + 4, C - 48);
+    ctx.bezierCurveTo(C + 12, C - 67, C + 31, C - 72, C + 38, C - 84);
+    ctx.stroke();
+    ctx.fillStyle = OUTLINE;
+    for (const ax of [C - 39, C + 39]) {
+      ctx.beginPath();
+      ctx.arc(ax, C - 85, 4, 0, TAU);
+      ctx.fill();
+    }
+
+    // Head, fuzzy thorax, and tapered segmented abdomen.
+    ctx.beginPath();
+    ctx.arc(C, C - 43, 10, 0, TAU);
+    ctx.fillStyle = "#302923";
+    ctx.fill();
+    stroke(ctx, 4);
+    ctx.beginPath();
+    ctx.ellipse(C, C - 20, 12, 18, 0, 0, TAU);
+    ctx.fillStyle = "#3a3028";
+    ctx.fill();
+    stroke(ctx, 5);
+    ctx.beginPath();
+    ctx.moveTo(C - 8, C - 8);
+    ctx.bezierCurveTo(C - 10, C + 20, C - 7, C + 52, C, C + 67);
+    ctx.bezierCurveTo(C + 7, C + 52, C + 10, C + 20, C + 8, C - 8);
+    ctx.closePath();
+    ctx.fillStyle = "#30271f";
+    ctx.fill();
+    stroke(ctx, 5);
+    ctx.strokeStyle = "rgba(246,229,194,0.78)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (const y of [C + 5, C + 19, C + 33, C + 47]) {
+      ctx.moveTo(C - 7, y);
+      ctx.lineTo(C + 7, y);
+    }
     ctx.stroke();
   },
   leaf(ctx) {
+    // A crooked stem and uneven outline keep the leaf from reading as a
+    // mirrored symbol. The two sides use different curves and fullness.
+    ctx.strokeStyle = "#496f35";
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.moveTo(C, C - 80);
-    ctx.quadraticCurveTo(C + 62, C, C, C + 80);
-    ctx.quadraticCurveTo(C - 62, C, C, C - 80);
+    ctx.moveTo(C - 35, C + 53);
+    ctx.bezierCurveTo(C - 47, C + 69, C - 57, C + 78, C - 67, C + 88);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(C + 54, C - 86);
+    ctx.bezierCurveTo(C + 67, C - 47, C + 70, C - 14, C + 53, C + 17);
+    ctx.bezierCurveTo(C + 36, C + 47, C + 8, C + 62, C - 35, C + 57);
+    ctx.bezierCurveTo(C - 48, C + 30, C - 52, C + 1, C - 38, C - 26);
+    ctx.bezierCurveTo(C - 21, C - 58, C + 11, C - 78, C + 54, C - 86);
     ctx.closePath();
-    ctx.fillStyle = "#74cf74";
+    ctx.fillStyle = "#70bd63";
     ctx.fill();
     stroke(ctx);
-    ctx.strokeStyle = "rgba(28,80,28,0.85)";
+
+    // The midrib bends naturally from the stem toward the offset tip.
+    ctx.strokeStyle = "rgba(45,94,43,0.88)";
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(C, C - 70);
-    ctx.lineTo(C, C + 70);
+    ctx.moveTo(C - 39, C + 61);
+    ctx.bezierCurveTo(C - 20, C + 30, C + 8, C - 20, C + 49, C - 78);
+    ctx.stroke();
+
+    // Irregularly spaced side veins follow the curved midrib.
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = "rgba(45,94,43,0.72)";
+    ctx.beginPath();
+    ctx.moveTo(C - 24, C + 34);
+    ctx.bezierCurveTo(C - 39, C + 28, C - 44, C + 22, C - 47, C + 12);
+    ctx.moveTo(C - 12, C + 14);
+    ctx.bezierCurveTo(C - 31, C + 4, C - 36, C - 6, C - 37, C - 17);
+    ctx.moveTo(C + 2, C - 9);
+    ctx.bezierCurveTo(C - 12, C - 23, C - 17, C - 35, C - 15, C - 45);
+    ctx.moveTo(C - 15, C + 20);
+    ctx.bezierCurveTo(C + 8, C + 31, C + 25, C + 31, C + 39, C + 24);
+    ctx.moveTo(C, C - 4);
+    ctx.bezierCurveTo(C + 23, C + 4, C + 40, C, C + 54, C - 11);
+    ctx.moveTo(C + 17, C - 31);
+    ctx.bezierCurveTo(C + 34, C - 27, C + 48, C - 32, C + 61, C - 43);
+    ctx.stroke();
+
+    // A soft highlight suggests the slightly folded surface.
+    ctx.strokeStyle = "rgba(205,235,157,0.38)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(C - 31, C - 19);
+    ctx.bezierCurveTo(C - 26, C - 28, C - 4, C - 58, C + 29, C - 72);
     ctx.stroke();
   },
   mushroom(ctx) {
