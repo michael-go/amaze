@@ -11,6 +11,7 @@ export const EXTRA_TYPES = [
   "fraction",
   "money",
   "clock",
+  "picture",
 ];
 export const ALL_TYPES = [...ALL_OPS, ...EXTRA_TYPES];
 
@@ -18,6 +19,14 @@ const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 const pick = (arr) => arr[randInt(0, arr.length - 1)];
 
 const COUNT_EMOJIS = ["🍎", "⭐", "🐟", "🎈", "🦋", "🍪"];
+const PICTURE_SETS = [
+  ["🚗", "🚌", "📷"],
+  ["🐢", "🕊️", "🐇"],
+  ["🍕", "🍦", "🧁"],
+  ["🚀", "🤖", "🛸"],
+  ["🐘", "🦁", "🦒"],
+  ["⚽", "🎈", "🎁"],
+];
 const FRACTIONS = [
   { name: "half", div: 2 },
   { name: "third", div: 3 },
@@ -206,6 +215,92 @@ function clockQuestion() {
   return { kind: "clock", hour, minutes, answer: hour * 100 + minutes };
 }
 
+function pictureQuestion() {
+  const [aIcon, bIcon, cIcon] = pick(PICTURE_SETS);
+  const equation = (terms, ops, result) => ({ terms, ops, result });
+  const form = randInt(0, 4);
+
+  if (form === 0) {
+    // A + B + B = total, A = value, B = ?
+    const a = randInt(2, 15);
+    const b = randInt(2, 12);
+    return {
+      kind: "picture",
+      equations: [
+        equation([aIcon, bIcon, bIcon], ["+", "+"], a + b * 2),
+        equation([aIcon], [], a),
+        equation([bIcon], [], "?"),
+      ],
+      answer: b,
+    };
+  }
+
+  if (form === 1) {
+    // A - B - n = result, B = value, A = ?
+    const b = randInt(2, 10);
+    const n = randInt(1, 8);
+    const result = randInt(2, 12);
+    const a = b + n + result;
+    return {
+      kind: "picture",
+      equations: [
+        equation([aIcon, bIcon, n], ["−", "−"], result),
+        equation([bIcon], [], b),
+        equation([aIcon], [], "?"),
+      ],
+      answer: a,
+    };
+  }
+
+  if (form === 2) {
+    // A + B + C = total, C = value, A + B = ?
+    const a = randInt(2, 15);
+    const b = randInt(2, 15);
+    const c = randInt(2, 12);
+    return {
+      kind: "picture",
+      equations: [
+        equation([aIcon, bIcon, cIcon], ["+", "+"], a + b + c),
+        equation([cIcon], [], c),
+        equation([aIcon, bIcon], ["+"], "?"),
+      ],
+      answer: a + b,
+    };
+  }
+
+  if (form === 3) {
+    // A + B + B = first total, A + B = second total, B = ?
+    const a = randInt(2, 15);
+    const b = randInt(2, 12);
+    return {
+      kind: "picture",
+      equations: [
+        equation([aIcon, bIcon, bIcon], ["+", "+"], a + b * 2),
+        equation([aIcon, bIcon], ["+"], a + b),
+        equation([bIcon], [], "?"),
+      ],
+      answer: b,
+    };
+  }
+
+  // A + B + n = total + A, B = ? (A cancels from both sides)
+  const n = randInt(2, 10);
+  const b = randInt(2, 15);
+  return {
+    kind: "picture",
+    equations: [
+      {
+        terms: [aIcon, bIcon, n],
+        ops: ["+", "+"],
+        result: b + n,
+        resultTerms: [aIcon],
+      },
+      equation([bIcon], [], "?"),
+    ],
+    answer: b,
+  };
+}
+
 export function generateQuestion(enabled = ALL_TYPES) {
   const kinds = enabled.filter((k) => ALL_TYPES.includes(k));
   const kind = kinds.length ? pick(kinds) : "+";
@@ -226,6 +321,8 @@ export function generateQuestion(enabled = ALL_TYPES) {
       return moneyQuestion();
     case "clock":
       return clockQuestion();
+    case "picture":
+      return pictureQuestion();
     default:
       return arithQuestion(kind);
   }

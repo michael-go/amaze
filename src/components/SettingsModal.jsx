@@ -12,6 +12,7 @@ const TYPE_ICONS = {
   fraction: "½",
   money: "💰",
   clock: "🕒",
+  picture: "🧩",
 };
 
 const typeLabel = (t, key) => t["type" + key[0].toUpperCase() + key.slice(1)];

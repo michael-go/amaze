@@ -84,6 +84,61 @@ const FRAC_KEYS = {
   quarter: "fracQuarter",
 };
 
+function PictureTerm({ term }) {
+  const isPicture = typeof term === "string" && Number.isNaN(Number(term));
+  return (
+    <span style={isPicture ? styles.pictureIcon : styles.pictureNumber}>
+      {term}
+    </span>
+  );
+}
+
+function PictureEquation({ line }) {
+  return (
+    <div style={styles.pictureEquation}>
+      <div style={styles.pictureSide}>
+        {line.terms.map((term, index) => (
+          <span key={`${term}-${index}`} style={styles.pictureGroup}>
+            {index > 0 && (
+              <span style={styles.pictureOperator}>{line.ops[index - 1]}</span>
+            )}
+            <PictureTerm term={term} />
+          </span>
+        ))}
+      </div>
+      <span style={styles.pictureEquals}>=</span>
+      {line.resultTerms ? (
+        <div style={styles.pictureSide}>
+          <PictureTerm term={line.result} />
+          <span style={styles.pictureOperator}>+</span>
+          {line.resultTerms.map((term, index) => (
+            <PictureTerm key={`${term}-${index}`} term={term} />
+          ))}
+        </div>
+      ) : (
+        <span
+          style={{
+            ...styles.pictureResult,
+            ...(line.result === "?" ? styles.pictureQuestionMark : {}),
+          }}
+        >
+          {line.result}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PicturePuzzle({ equations, label }) {
+  return (
+    <div style={styles.picturePuzzle} aria-label={label}>
+      {equations.map((line, index) => (
+        <PictureEquation key={index} line={line} />
+      ))}
+    </div>
+  );
+}
+
 function QuestionDisplay({ q, t }) {
   // Symbolic questions render LTR even in Hebrew; sentences follow the language.
   const symbolic = (text, full) => (
@@ -140,6 +195,10 @@ function QuestionDisplay({ q, t }) {
             {t.quizClock}
           </div>
         </>
+      );
+    case "picture":
+      return (
+        <PicturePuzzle equations={q.equations} label={t.quizPictureLabel} />
       );
     default:
       return symbolic(q.text);
@@ -373,6 +432,71 @@ const styles = {
     lineHeight: 1.5,
     maxWidth: 340,
     margin: "0 auto 12px",
+  },
+  picturePuzzle: {
+    direction: "ltr",
+    display: "flex",
+    flexDirection: "column",
+    gap: "clamp(7px, 1vw, 10px)",
+    minWidth: 300,
+    padding: "clamp(10px, 3vw, 18px) clamp(10px, 3vw, 22px)",
+    margin: "0 auto 18px",
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.055)",
+    border: "1px solid rgba(255,255,255,0.12)",
+  },
+  pictureEquation: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
+    gap: "clamp(3px, 1vw, 10px)",
+  },
+  pictureSide: {
+    display: "flex",
+    alignItems: "center",
+    gap: "clamp(3px, 1vw, 10px)",
+  },
+  pictureGroup: {
+    display: "contents",
+  },
+  pictureIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "clamp(36px, 5vw, 46px)",
+    height: "clamp(36px, 5vw, 46px)",
+    borderRadius: 13,
+    background: "rgba(255,255,255,0.09)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+    fontSize: "clamp(23px, 3.3vw, 29px)",
+    lineHeight: 1,
+  },
+  pictureNumber: {
+    minWidth: 24,
+    color: "#fff",
+    fontSize: "clamp(23px, 3vw, 27px)",
+    fontWeight: 800,
+  },
+  pictureOperator: {
+    color: "var(--text-dim)",
+    fontSize: "clamp(18px, 3vw, 25px)",
+    fontWeight: 800,
+  },
+  pictureEquals: {
+    color: "var(--accent-soft)",
+    fontSize: "clamp(21px, 3vw, 27px)",
+    fontWeight: 900,
+  },
+  pictureResult: {
+    minWidth: 38,
+    color: "#fff",
+    fontSize: "clamp(24px, 3vw, 28px)",
+    fontWeight: 900,
+  },
+  pictureQuestionMark: {
+    color: "var(--accent-soft)",
+    fontSize: 34,
   },
   wrong: {
     color: "#ff6a6a",

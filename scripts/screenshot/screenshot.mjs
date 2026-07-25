@@ -30,7 +30,7 @@ Options:
                           can turn, spawn, then walk
   --quiz KIND             force a single quiz kind and open the map quiz.
                           Kinds: + - × ÷ missing pattern count halfDouble
-                                 twoStep fraction money clock
+                                 twoStep fraction money clock picture
   --solve                 auto-answer the open quiz before the screenshot
   --settings              open the settings modal (on the title screen)
   --hold KEY:MS[,...]     hold key(s) for MS milliseconds, e.g. ArrowUp:900.

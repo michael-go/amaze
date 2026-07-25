@@ -59,6 +59,7 @@ const strings = {
     typeFraction: "שברים",
     typeMoney: "כסף",
     typeClock: "שעון",
+    typePicture: "משוואות בציורים",
     quizHowMany: "כמה?",
     quizDouble: (n) => `פעמיים ${n}?`,
     fracHalf: "חצי",
@@ -70,6 +71,7 @@ const strings = {
     quizMoneyTotal: (a, b, format) =>
       `צעצוע עולה ${formatMoney(a, "he", format)} ומדבקה עולה ${formatMoney(b, "he", format)}. כמה ביחד?`,
     quizClock: "מה השעה?",
+    quizPictureLabel: "משוואות בציורים",
     sound: "צלילים",
     save: "שמירה",
     continueFrom: (n) => `המשיכו משלב ${n}`,
@@ -136,6 +138,7 @@ const strings = {
     typeFraction: "Fractions",
     typeMoney: "Money",
     typeClock: "Clock",
+    typePicture: "Picture equations",
     quizHowMany: "How many?",
     quizDouble: (n) => `Double ${n}?`,
     fracHalf: "Half",
@@ -147,6 +150,7 @@ const strings = {
     quizMoneyTotal: (a, b) =>
       `A toy costs ${formatMoney(a, "en")} and a sticker costs ${formatMoney(b, "en")}. How much together?`,
     quizClock: "What time is it?",
+    quizPictureLabel: "Picture equations",
     sound: "SOUND",
     save: "SAVE",
     continueFrom: (n) => `CONTINUE FROM LEVEL ${n}`,

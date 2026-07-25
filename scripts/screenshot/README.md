@@ -62,7 +62,7 @@ node test.mjs quiz            # one scenario: quiz | pickup | settings
 
 Scenarios:
 
-- **quiz** — for every quiz kind (the four ops + the eight extra types):
+- **quiz** — for every quiz kind (the four ops + the nine extra types):
   open the map quiz, verify a wrong answer is rejected with a message, then
   verify the correct answer closes the modal and unlocks the top view
 - **pickup** — spawn a magic item, walk into it, solve the pickup quiz, and

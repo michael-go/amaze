@@ -1,9 +1,3 @@
 # Amaze
 
-## Deploy
-
-```
-npm run deploy
-```
-
-This runs `vercel --prod`.
+Project instructions are maintained in [AGENTS.md](AGENTS.md).
