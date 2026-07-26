@@ -9,6 +9,7 @@ import {
   spawnItem,
   openMapQuiz,
   solveQuiz,
+  standByLandmark,
   screenshot,
 } from "./lib.mjs";
 
@@ -33,6 +34,7 @@ Options:
                                  twoStep fraction money clock picture
   --solve                 auto-answer the open quiz before the screenshot
   --settings              open the settings modal (on the title screen)
+  --landmark              stand by a landmark to capture the dance
   --hold KEY:MS[,...]     hold key(s) for MS milliseconds, e.g. ArrowUp:900.
                           Each key is released after its time, except the last
                           one, which stays held through the screenshot (for
@@ -76,10 +78,12 @@ function parseArgs(argv) {
     else if (a === "--level") opts.level = parseInt(next(), 10);
     else if (a === "--maze-seed") opts.mazeSeed = parseInt(next(), 10);
     else if (a === "--items-seed") opts.itemsSeed = parseInt(next(), 10);
-    else if (a === "--spawn") opts.actions.push({ type: "spawn", item: next() });
+    else if (a === "--spawn")
+      opts.actions.push({ type: "spawn", item: next() });
     else if (a === "--quiz") opts.quiz = next();
     else if (a === "--solve") opts.solve = true;
     else if (a === "--settings") opts.settings = true;
+    else if (a === "--landmark") opts.landmark = true;
     else if (a === "--hold")
       for (const part of next().split(",")) {
         const [key, ms] = part.split(":");
@@ -112,7 +116,7 @@ const { browser, page } = await launch({
   lang: opts.lang,
   quiz: opts.quiz,
   debug,
-  test: opts.solve,
+  test: opts.solve || opts.landmark,
   width,
   height,
 });
@@ -156,6 +160,7 @@ try {
       }
     }
 
+    if (opts.landmark) await standByLandmark(page);
     if (opts.quiz) await openMapQuiz(page);
     if (opts.solve) await solveQuiz(page);
   }

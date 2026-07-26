@@ -171,6 +171,32 @@ export async function solveQuiz(page) {
   await answerQuiz(page, await readQuizAnswer(page));
 }
 
+export async function standByLandmark(page) {
+  await page.waitForFunction(
+    () =>
+      window.__playerPosition &&
+      window.__playerYaw &&
+      window.__landmarks?.length,
+    { timeout: 5000 },
+  );
+  await page.evaluate(() => {
+    const landmark = window.__landmarks[0];
+    const nx = Math.sin(landmark.rotY);
+    const nz = Math.cos(landmark.rotY);
+    window.__playerPosition.set(
+      landmark.pos[0] + nx * 1.5,
+      0,
+      landmark.pos[2] + nz * 1.5,
+    );
+    window.__playerYaw.current = landmark.rotY;
+  });
+  await sleep(500);
+}
+
+export async function kidDancing(page) {
+  return page.evaluate(() => window.__kidDancing === true);
+}
+
 export async function bodyText(page) {
   return page.evaluate(() => document.body.innerText);
 }

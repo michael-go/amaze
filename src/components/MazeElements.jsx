@@ -371,7 +371,7 @@ function decalHash(x, z) {
 const GLOW_FAR = 14; // starts brightening inside this distance (~3.5 cells)
 const GLOW_NEAR = 3; // fully lit here
 
-export function WallDecals({ wallBoxes, game, playerPos }) {
+export function WallDecals({ wallBoxes, game, playerPos, landmarksRef }) {
   const geo = useMemo(
     () => new THREE.PlaneGeometry(DECAL_SIZE, DECAL_SIZE),
     [],
@@ -488,6 +488,14 @@ export function WallDecals({ wallBoxes, game, playerPos }) {
     }
     return out;
   }, [wallBoxes, game.width, game.height, game.mask]);
+
+  useEffect(() => {
+    if (!landmarksRef) return;
+    landmarksRef.current = decals;
+    return () => {
+      if (landmarksRef.current === decals) landmarksRef.current = [];
+    };
+  }, [decals, landmarksRef]);
 
   // Each motif appears at most once per level, so its per-kind material is
   // effectively per-decal and safe to animate per mesh.

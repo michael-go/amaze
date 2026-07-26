@@ -1,7 +1,7 @@
 // End-to-end smoke tests for the game (dev server must be up).
 //
 // Usage: node test.mjs [scenario...]   (default: all)
-// Scenarios: quiz | pickup | settings | touch
+// Scenarios: quiz | pickup | settings | touch | dance
 import { ALL_TYPES } from "../../src/lib/quiz.js";
 import {
   launch,
@@ -18,6 +18,8 @@ import {
   readQuizAnswer,
   answerQuiz,
   solveQuiz,
+  standByLandmark,
+  kidDancing,
   bodyText,
   setQuizKinds,
 } from "./lib.mjs";
@@ -176,11 +178,42 @@ async function testTouchControls() {
   }
 }
 
+async function testLandmarkDance() {
+  const { browser, page } = await launch({ test: true });
+  try {
+    await startGame(page);
+    await skipCountdown(page);
+    await standByLandmark(page);
+    check(await kidDancing(page), "kid dances while standing by a landmark");
+    await sleep(5200);
+    check(!(await kidDancing(page)), "landmark dance stops after five seconds");
+
+    await page.evaluate(() => {
+      const landmark = window.__landmarks[0];
+      const nx = Math.sin(landmark.rotY);
+      const nz = Math.cos(landmark.rotY);
+      window.__playerPosition.set(
+        landmark.pos[0] + nx * 5,
+        0,
+        landmark.pos[2] + nz * 5,
+      );
+    });
+    await sleep(500);
+    check(!(await kidDancing(page)), "kid stops dancing away from landmarks");
+    await standByLandmark(page);
+    check(await kidDancing(page), "a new landmark approach starts a new dance");
+    console.log("  ✓ dance → five-second stop → move away → dance again");
+  } finally {
+    await browser.close();
+  }
+}
+
 const SCENARIOS = {
   quiz: testQuizKinds,
   pickup: testPickup,
   settings: testSettings,
   touch: testTouchControls,
+  dance: testLandmarkDance,
 };
 const requested = process.argv.slice(2);
 const names = requested.length ? requested : Object.keys(SCENARIOS);

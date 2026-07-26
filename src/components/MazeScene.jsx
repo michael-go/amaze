@@ -44,6 +44,7 @@ export function powerDuration(level) {
 const CAM_BEHIND = 2.0;
 const CAM_HEIGHT = 2.0;
 const CAM_LERP = 5; // smoothing
+const TEST_HOOKS = /debug|test/.test(window.location.hash);
 
 export default function MazeScene({
   game,
@@ -82,6 +83,7 @@ export default function MazeScene({
   const skipCleared = useRef(false);
   const bumpCooldown = useRef(0);
   const readyGame = useRef(null);
+  const landmarksRef = useRef([]);
 
   const wallBoxes = useMemo(
     () => getWallBoxes(game.cells, game.mask),
@@ -152,6 +154,16 @@ export default function MazeScene({
     lastCell.current = "";
   }, [game]);
 
+  useEffect(
+    () => () => {
+      if (!TEST_HOOKS) return;
+      delete window.__playerPosition;
+      delete window.__playerYaw;
+      delete window.__landmarks;
+    },
+    [],
+  );
+
   function isVoid(nx, nz) {
     if (!game.mask) return false;
     const cx = Math.floor(nx / CELL_SIZE);
@@ -188,6 +200,11 @@ export default function MazeScene({
       onReady?.();
     }
     const pos = playerPos.current;
+    if (TEST_HOOKS) {
+      window.__playerPosition = pos;
+      window.__playerYaw = yaw;
+      window.__landmarks = landmarksRef.current;
+    }
     if (playerInfoRef) {
       // Mutate in place — allocating a fresh object every frame adds GC churn
       if (playerInfoRef.current) {
@@ -443,7 +460,12 @@ export default function MazeScene({
         topView={topView}
         game={game}
       />
-      <WallDecals wallBoxes={wallBoxes} game={game} playerPos={playerPos} />
+      <WallDecals
+        wallBoxes={wallBoxes}
+        game={game}
+        playerPos={playerPos}
+        landmarksRef={landmarksRef}
+      />
       <TreasureChest position={game.exitPos} />
       <StartMarker game={game} />
       {magicItems &&
@@ -458,6 +480,7 @@ export default function MazeScene({
         isMoving={isMoving}
         activePower={activePower}
         playerY={playerY}
+        landmarks={landmarksRef}
         frozen={frozen || won}
         won={won}
       />

@@ -49,6 +49,9 @@ node screenshot.mjs --quiz clock --solve /tmp/map_unlocked.png
 # Settings modal
 node screenshot.mjs --settings --lang he /tmp/settings_he.png
 
+# Kid dancing beside a landmark picture
+node screenshot.mjs --landmark /tmp/landmark_dance.png
+
 # Crop to a region (x,y,width,height)
 node screenshot.mjs --crop 300,200,400,300 /tmp/cropped.png
 ```
@@ -68,6 +71,8 @@ Scenarios:
 - **pickup** — spawn a magic item, walk into it, solve the pickup quiz, and
   verify the power banner appears
 - **settings** — toggle a quiz type, save, and verify it persists
+- **dance** — stand beside a landmark, verify the dance starts, then move away
+  and verify it stops
 
 Exit code is non-zero on failure, so it can gate scripts/CI.
 
