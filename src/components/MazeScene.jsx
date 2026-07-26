@@ -43,6 +43,10 @@ export function powerDuration(level) {
 // Third-person camera offset
 const CAM_BEHIND = 2.0;
 const CAM_HEIGHT = 2.0;
+const CAM_LOOK_HEIGHT = 1.0;
+const PORTRAIT_CAM_BEHIND = 2.3;
+const PORTRAIT_CAM_HEIGHT = 1.9;
+const PORTRAIT_CAM_LOOK_HEIGHT = 1.35;
 const CAM_LERP = 5; // smoothing
 const TEST_HOOKS = /debug|test/.test(window.location.hash);
 
@@ -386,28 +390,42 @@ export default function MazeScene({
       camera.up.set(0, 1, 0);
       const behindX = Math.sin(yaw.current);
       const behindZ = Math.cos(yaw.current);
-      let camDist = CAM_BEHIND;
+      const isPortrait = camera.aspect < 1;
+      const baseCamDist = isPortrait ? PORTRAIT_CAM_BEHIND : CAM_BEHIND;
+      const baseCamHeight = isPortrait ? PORTRAIT_CAM_HEIGHT : CAM_HEIGHT;
+      const lookHeight = isPortrait
+        ? PORTRAIT_CAM_LOOK_HEIGHT
+        : CAM_LOOK_HEIGHT;
+      let camDist = baseCamDist;
+      if (TEST_HOOKS) {
+        window.__cameraProfile = {
+          isPortrait,
+          distance: baseCamDist,
+          height: baseCamHeight,
+          lookHeight,
+        };
+      }
 
       // When on the ground, pull camera in if it would clip through a wall
       if (!isFlying) {
         const steps = 8;
         for (let s = 1; s <= steps; s++) {
-          const t = (s / steps) * CAM_BEHIND;
+          const t = (s / steps) * baseCamDist;
           const tx = pos.x + behindX * t;
           const tz = pos.z + behindZ * t;
           if (collidesWithWall(tx, tz)) {
-            camDist = Math.max(((s - 1) / steps) * CAM_BEHIND, 0.3);
+            camDist = Math.max(((s - 1) / steps) * baseCamDist, 0.3);
             break;
           }
         }
       }
 
       // When pulled in, raise camera above the walls so it doesn't clip
-      const pullRatio = 1 - camDist / CAM_BEHIND;
-      const extraHeight = pullRatio * (WALL_HEIGHT + 0.5 - CAM_HEIGHT);
+      const pullRatio = 1 - camDist / baseCamDist;
+      const extraHeight = pullRatio * (WALL_HEIGHT + 0.5 - baseCamHeight);
       const idealX = pos.x + behindX * camDist;
       const idealZ = pos.z + behindZ * camDist;
-      const idealY = CAM_HEIGHT + playerY.current + extraHeight;
+      const idealY = baseCamHeight + playerY.current + extraHeight;
 
       camera.position.set(
         THREE.MathUtils.lerp(camera.position.x, idealX, CAM_LERP * delta),
@@ -415,7 +433,7 @@ export default function MazeScene({
         THREE.MathUtils.lerp(camera.position.z, idealZ, CAM_LERP * delta),
       );
 
-      camera.lookAt(pos.x, 1.0 + playerY.current, pos.z);
+      camera.lookAt(pos.x, lookHeight + playerY.current, pos.z);
     }
 
     // Check win (only when on the ground)

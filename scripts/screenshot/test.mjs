@@ -69,6 +69,13 @@ async function testPickup() {
   try {
     await startGame(page);
     await skipCountdown(page);
+    const cameraProfile = await page.evaluate(() => window.__cameraProfile);
+    check(
+      !cameraProfile?.isPortrait &&
+        cameraProfile?.lookHeight === 1 &&
+        cameraProfile?.distance === 2,
+      "landscape camera framing remains unchanged",
+    );
     await hold(page, "ArrowLeft", 630);
     await spawnItem(page, "fly");
     await hold(page, "ArrowUp", 1200);
@@ -132,6 +139,12 @@ async function testTouchControls() {
     check(
       sourceLinkHidden,
       "gameplay source link does not cover mobile controls",
+    );
+    const cameraProfile = await page.evaluate(() => window.__cameraProfile);
+    check(cameraProfile?.isPortrait, "portrait camera profile is active");
+    check(
+      cameraProfile.lookHeight > 1.2 && cameraProfile.distance > 2,
+      "portrait camera looks farther forward",
     );
 
     const rect = await joystick.boundingBox();
