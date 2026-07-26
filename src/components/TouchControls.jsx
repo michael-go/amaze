@@ -9,7 +9,7 @@ const HIT_SIZE = 156;
 const BASE_SIZE = 120;
 const KNOB_SIZE = 48;
 const MAX_TRAVEL = (BASE_SIZE - KNOB_SIZE) / 2;
-const MOVE_DEADZONE = 0.12;
+const MOVE_DEADZONE = 0.16;
 const TURN_DEADZONE = 0.28;
 
 function applyDeadzone(value, deadzone) {
@@ -17,6 +17,11 @@ function applyDeadzone(value, deadzone) {
   if (magnitude <= deadzone) return 0;
   const scaled = (magnitude - deadzone) / (1 - deadzone);
   return Math.sign(value) * Math.min(1, scaled);
+}
+
+function boostMovement(value) {
+  if (value === 0) return 0;
+  return Math.sign(value) * (0.75 + Math.abs(value) * 0.25);
 }
 
 function sendControl(move, turn) {
@@ -90,7 +95,11 @@ function TouchJoystick() {
 
       // Movement is proportional instead of instantly jumping to full speed.
       // A wider horizontal dead zone prevents small thumb drift from steering.
-      const move = -applyDeadzone(dy / MAX_TRAVEL, MOVE_DEADZONE);
+      // Walking should feel immediate, like the original button control:
+      // once engaged it starts at a brisk pace, then reaches full speed.
+      const move = boostMovement(
+        -applyDeadzone(dy / MAX_TRAVEL, MOVE_DEADZONE),
+      );
       const turn = -applyDeadzone(dx / MAX_TRAVEL, TURN_DEADZONE);
       publishControl(move, turn);
     },

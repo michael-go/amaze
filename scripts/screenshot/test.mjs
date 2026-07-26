@@ -164,7 +164,13 @@ async function testTouchControls() {
       ),
     );
     check(active, "diagonal drag sends forward movement and right steering");
+    check(active.move >= 0.75, "walking starts at a brisk speed");
 
+    // Hold longer than the adaptive renderer's idle timeout. Touch movement
+    // must keep the game at its smooth active frame rate for the whole walk.
+    await sleep(2200);
+    const sustainedFps = await page.evaluate(() => window.__amazeTargetFps);
+    check(sustainedFps === 60, "sustained touch movement stays at 60fps");
     await page.mouse.up();
     await sleep(50);
     const released = await page.evaluate(() => window.__touchSamples.at(-1));

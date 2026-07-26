@@ -33,6 +33,7 @@ import {
   defaultItemsSeed,
 } from "../lib/levelConfig";
 import { createRng } from "../lib/rng";
+import { TOUCH_CONTROL_EVENT } from "../lib/useKeyboardControls";
 import { ALL_TYPES } from "../lib/quiz";
 import { ITEM_COLORS } from "./MagicItem";
 import {
@@ -52,6 +53,7 @@ const SettingsModal = lazy(() => import("./SettingsModal"));
 const ConfirmModal = lazy(() => import("./ConfirmModal"));
 const LevelPicker = lazy(() => import("./LevelPicker"));
 const DEBUG_ENABLED = window.location.hash.includes("debug");
+const TEST_ENABLED = window.location.hash.includes("test");
 
 const ACTIVE_FPS = 60;
 const IDLE_FPS = 24;
@@ -61,6 +63,7 @@ function AdaptiveFrameLoop({ paused }) {
   const advance = useThree((state) => state.advance);
   const activeUntil = useRef(performance.now() + IDLE_AFTER_MS);
   const pressedKeys = useRef(new Set());
+  const touchActive = useRef(false);
 
   useEffect(() => {
     const markActive = () => {
@@ -74,13 +77,21 @@ function AdaptiveFrameLoop({ paused }) {
       pressedKeys.current.delete(event.code);
       markActive();
     };
+    const onTouchControl = (event) => {
+      const move = Math.abs(event.detail?.move || 0);
+      const turn = Math.abs(event.detail?.turn || 0);
+      touchActive.current = move > 0.01 || turn > 0.01;
+      if (touchActive.current) markActive();
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener(TOUCH_CONTROL_EVENT, onTouchControl);
     window.addEventListener("pointerdown", markActive);
     window.addEventListener("touchstart", markActive, { passive: true });
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener(TOUCH_CONTROL_EVENT, onTouchControl);
       window.removeEventListener("pointerdown", markActive);
       window.removeEventListener("touchstart", markActive);
     };
@@ -92,7 +103,13 @@ function AdaptiveFrameLoop({ paused }) {
     let lastFrame = 0;
     const tick = (now) => {
       raf = requestAnimationFrame(tick);
-      const active = pressedKeys.current.size > 0 || now < activeUntil.current;
+      const active =
+        pressedKeys.current.size > 0 ||
+        touchActive.current ||
+        now < activeUntil.current;
+      if (TEST_ENABLED) {
+        window.__amazeTargetFps = active ? ACTIVE_FPS : IDLE_FPS;
+      }
       const interval = 1000 / (active ? ACTIVE_FPS : IDLE_FPS);
       if (now - lastFrame < interval) return;
       lastFrame = now - ((now - lastFrame) % interval);
