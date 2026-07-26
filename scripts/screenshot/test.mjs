@@ -1,7 +1,7 @@
 // End-to-end smoke tests for the game (dev server must be up).
 //
 // Usage: node test.mjs [scenario...]   (default: all)
-// Scenarios: quiz | pickup | settings
+// Scenarios: quiz | pickup | settings | touch
 import { ALL_TYPES } from "../../src/lib/quiz.js";
 import {
   launch,
@@ -109,10 +109,78 @@ async function testSettings() {
   }
 }
 
+// Verify the mobile joystick has a generous hit target, sends proportional
+// movement and steering, keeps tracking outside its edge, and stops on release.
+async function testTouchControls() {
+  const { browser, page } = await launch({
+    test: true,
+    touch: true,
+    width: 390,
+    height: 844,
+  });
+  try {
+    await startGame(page);
+    await skipCountdown(page);
+    const joystick = await page.$('[data-testid="touch-joystick"]');
+    check(joystick, "touch joystick is visible while playing");
+    const sourceLinkHidden = await page.$eval(
+      ".game-github-link",
+      (element) => getComputedStyle(element).display === "none",
+    );
+    check(
+      sourceLinkHidden,
+      "gameplay source link does not cover mobile controls",
+    );
+
+    const rect = await joystick.boundingBox();
+    check(
+      rect.width >= 150 && rect.height >= 150,
+      "joystick hit target is large",
+    );
+    const visibleSize = await joystick.$eval(
+      ":scope > div",
+      (element) => element.getBoundingClientRect().width,
+    );
+    check(visibleSize <= 120, "visible joystick stays compact");
+    await page.evaluate(() => {
+      window.__touchSamples = [];
+      window.addEventListener("amaze:touch-control", (event) => {
+        window.__touchSamples.push(event.detail);
+      });
+    });
+
+    const cx = rect.x + rect.width / 2;
+    const cy = rect.y + rect.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    // End beyond the ring to exercise pointer capture as well as clamping.
+    await page.mouse.move(cx + 90, cy - 100, { steps: 8 });
+    await sleep(100);
+    const active = await page.evaluate(() =>
+      window.__touchSamples.findLast(
+        (sample) => sample.move > 0.4 && sample.turn < -0.2,
+      ),
+    );
+    check(active, "diagonal drag sends forward movement and right steering");
+
+    await page.mouse.up();
+    await sleep(50);
+    const released = await page.evaluate(() => window.__touchSamples.at(-1));
+    check(
+      released?.move === 0 && released?.turn === 0,
+      "releasing the joystick stops all touch movement",
+    );
+    console.log("  ✓ large target → proportional drag → captured release");
+  } finally {
+    await browser.close();
+  }
+}
+
 const SCENARIOS = {
   quiz: testQuizKinds,
   pickup: testPickup,
   settings: testSettings,
+  touch: testTouchControls,
 };
 const requested = process.argv.slice(2);
 const names = requested.length ? requested : Object.keys(SCENARIOS);

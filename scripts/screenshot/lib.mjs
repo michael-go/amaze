@@ -23,20 +23,27 @@ export const BUTTONS = {
 // `debug`: open with the leva debug panel; `test`: enable test hooks
 // (window.__quizAnswer) without the panel.
 export async function launch({
-  url = "http://localhost:5173",
+  url = process.env.AMAZE_URL || "http://localhost:5173",
   lang = "en",
   quiz = null,
   debug = false,
   test = false,
   width = 900,
   height = 700,
+  touch = false,
 } = {}) {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--enable-webgl", "--use-gl=angle"],
   });
   const page = await browser.newPage();
-  await page.setViewport({ width, height });
+  await page.setViewport({
+    width,
+    height,
+    isMobile: touch,
+    hasTouch: touch,
+    deviceScaleFactor: touch ? 2 : 1,
+  });
   const kinds = quiz ? (Array.isArray(quiz) ? quiz : [quiz]) : null;
   await page.evaluateOnNewDocument(
     (lang, disabled) => {

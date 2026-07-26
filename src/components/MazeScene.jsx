@@ -267,29 +267,25 @@ export default function MazeScene({
 
     if (!topView) {
       // Turning
-      if (keys.turnLeft) yaw.current += TURN_SPEED * delta;
-      if (keys.turnRight) yaw.current -= TURN_SPEED * delta;
+      const keyboardTurn = (keys.turnLeft ? 1 : 0) - (keys.turnRight ? 1 : 0);
+      const turnInput = keyboardTurn || keys.touchTurn;
+      yaw.current += turnInput * TURN_SPEED * delta;
 
       // Forward/backward movement (plain scalars — no per-frame allocation)
       const fx = -Math.sin(yaw.current);
       const fz = -Math.cos(yaw.current);
 
-      let dx = 0,
-        dz = 0;
-      if (keys.forward) {
-        dx += fx;
-        dz += fz;
-      }
-      if (keys.backward) {
-        dx -= fx;
-        dz -= fz;
-      }
+      const keyboardMove = (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
+      const moveInput = keyboardMove || keys.touchMove;
+      let dx = fx * moveInput;
+      let dz = fz * moveInput;
 
       const len = Math.sqrt(dx * dx + dz * dz);
       isMoving.current = len > 0;
       if (len > 0) {
-        dx = (dx / len) * PLAYER_SPEED * delta;
-        dz = (dz / len) * PLAYER_SPEED * delta;
+        const speed = Math.min(1, len) * PLAYER_SPEED * delta;
+        dx = (dx / len) * speed;
+        dz = (dz / len) * speed;
 
         const ox = pos.x,
           oz = pos.z;

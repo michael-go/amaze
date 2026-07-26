@@ -32,6 +32,14 @@ button {
   font: inherit;
 }
 
+/* Keep the source link available during desktop play without letting it sit
+   over the movement joystick on phones and tablets. */
+@media (hover: none) and (pointer: coarse) {
+  .game-github-link {
+    display: none !important;
+  }
+}
+
 /* Frosted-glass card — used for modals and full-screen overlays, where the
    scene behind is paused (frameloop="demand"), so the blur costs nothing
    per frame. */

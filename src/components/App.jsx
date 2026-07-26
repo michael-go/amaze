@@ -1079,8 +1079,17 @@ export default function App() {
       >
         &#9881;
       </button>
-      <TouchControls />
-      <GitHubLink />
+      <TouchControls
+        enabled={
+          screen === "playing" &&
+          !topView &&
+          !quizInfo &&
+          !confirmExit &&
+          !won &&
+          stepsRemaining > 0
+        }
+      />
+      <GitHubLink className="game-github-link" />
       {DEBUG_ENABLED && (
         <Suspense fallback={null}>
           <DebugPanel
@@ -1143,10 +1152,11 @@ function Confetti() {
   );
 }
 
-function GitHubLink() {
+function GitHubLink({ className }) {
   const [show, setShow] = useState(false);
   return (
     <div
+      className={className}
       style={{
         position: "fixed",
         bottom: 12,

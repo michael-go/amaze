@@ -1,159 +1,250 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { TOUCH_CONTROL_EVENT } from "../lib/useKeyboardControls";
 
 const isTouchDevice = () =>
   typeof window !== "undefined" &&
   ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
-function fireKey(code, type) {
-  window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
+const HIT_SIZE = 156;
+const BASE_SIZE = 120;
+const KNOB_SIZE = 48;
+const MAX_TRAVEL = (BASE_SIZE - KNOB_SIZE) / 2;
+const MOVE_DEADZONE = 0.12;
+const TURN_DEADZONE = 0.28;
+
+function applyDeadzone(value, deadzone) {
+  const magnitude = Math.abs(value);
+  if (magnitude <= deadzone) return 0;
+  const scaled = (magnitude - deadzone) / (1 - deadzone);
+  return Math.sign(value) * Math.min(1, scaled);
 }
 
-const RADIUS = 60;
-const KNOB = 40;
-const DEADZONE = 0.15;
-const TURN_DEADZONE = 0.4;
+function sendControl(move, turn) {
+  window.dispatchEvent(
+    new CustomEvent(TOUCH_CONTROL_EVENT, {
+      detail: { move, turn },
+    }),
+  );
+}
 
-export default function TouchControls() {
-  // No hooks before this return — hooks live in TouchJoystick so the
-  // early exit doesn't violate the Rules of Hooks
-  if (!isTouchDevice()) return null;
+export default function TouchControls({ enabled = true }) {
+  // Hooks live in TouchJoystick so this device check can safely return early.
+  if (!isTouchDevice() || !enabled) return null;
   return <TouchJoystick />;
 }
 
 function TouchJoystick() {
-  const originRef = useRef(null);
-  const activeKeys = useRef({
-    ArrowUp: false,
-    ArrowDown: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-  });
+  const pointerRef = useRef(null);
+  const lastControlRef = useRef({ move: 0, turn: 0 });
   const [knobOffset, setKnobOffset] = useState({ x: 0, y: 0 });
+  const [control, setControl] = useState({ move: 0, turn: 0 });
   const [active, setActive] = useState(false);
 
-  const setKey = useCallback((code, pressed) => {
-    if (activeKeys.current[code] !== pressed) {
-      activeKeys.current[code] = pressed;
-      fireKey(code, pressed ? "keydown" : "keyup");
+  const publishControl = useCallback((move, turn) => {
+    const last = lastControlRef.current;
+    if (
+      Math.abs(last.move - move) < 0.01 &&
+      Math.abs(last.turn - turn) < 0.01
+    ) {
+      return;
     }
+    const next = { move, turn };
+    lastControlRef.current = next;
+    setControl(next);
+    sendControl(move, turn);
   }, []);
 
-  const releaseAll = useCallback(() => {
-    for (const code of Object.keys(activeKeys.current)) {
-      setKey(code, false);
-    }
-  }, [setKey]);
+  const reset = useCallback(() => {
+    pointerRef.current = null;
+    setActive(false);
+    setKnobOffset({ x: 0, y: 0 });
+    publishControl(0, 0);
+  }, [publishControl]);
 
-  const updateFromDelta = useCallback(
-    (dx, dy) => {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const maxDist = RADIUS - KNOB / 2;
-      // Clamp to circle
-      if (dist > maxDist) {
-        dx = (dx / dist) * maxDist;
-        dy = (dy / dist) * maxDist;
+  // Never leave the character moving if this control disappears under a modal,
+  // a view change, or navigation.
+  useEffect(() => {
+    const stop = () => reset();
+    window.addEventListener("blur", stop);
+    window.addEventListener("pagehide", stop);
+    return () => {
+      window.removeEventListener("blur", stop);
+      window.removeEventListener("pagehide", stop);
+      sendControl(0, 0);
+    };
+  }, [reset]);
+
+  const updateFromPointer = useCallback(
+    (clientX, clientY) => {
+      const origin = pointerRef.current;
+      if (!origin) return;
+
+      let dx = clientX - origin.x;
+      let dy = clientY - origin.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > MAX_TRAVEL) {
+        dx = (dx / distance) * MAX_TRAVEL;
+        dy = (dy / distance) * MAX_TRAVEL;
       }
       setKnobOffset({ x: dx, y: dy });
 
-      const nx = dx / maxDist;
-      const ny = dy / maxDist;
-
-      setKey("ArrowUp", ny < -DEADZONE);
-      setKey("ArrowDown", ny > DEADZONE);
-      setKey("ArrowLeft", nx < -TURN_DEADZONE);
-      setKey("ArrowRight", nx > TURN_DEADZONE);
+      // Movement is proportional instead of instantly jumping to full speed.
+      // A wider horizontal dead zone prevents small thumb drift from steering.
+      const move = -applyDeadzone(dy / MAX_TRAVEL, MOVE_DEADZONE);
+      const turn = -applyDeadzone(dx / MAX_TRAVEL, TURN_DEADZONE);
+      publishControl(move, turn);
     },
-    [setKey],
+    [publishControl],
   );
 
-  const onTouchStart = useCallback(
-    (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = e.currentTarget.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      originRef.current = { cx, cy, id: touch.identifier };
+  const onPointerDown = useCallback(
+    (event) => {
+      if (pointerRef.current) return;
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      pointerRef.current = {
+        id: event.pointerId,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      event.currentTarget.setPointerCapture?.(event.pointerId);
       setActive(true);
-      updateFromDelta(touch.clientX - cx, touch.clientY - cy);
+      updateFromPointer(event.clientX, event.clientY);
     },
-    [updateFromDelta],
+    [updateFromPointer],
   );
 
-  const onTouchMove = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!originRef.current) return;
-      for (const touch of e.changedTouches) {
-        if (touch.identifier === originRef.current.id) {
-          const { cx, cy } = originRef.current;
-          updateFromDelta(touch.clientX - cx, touch.clientY - cy);
-        }
-      }
+  const onPointerMove = useCallback(
+    (event) => {
+      if (pointerRef.current?.id !== event.pointerId) return;
+      event.preventDefault();
+      updateFromPointer(event.clientX, event.clientY);
     },
-    [updateFromDelta],
+    [updateFromPointer],
   );
 
-  const onTouchEnd = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!originRef.current) return;
-      for (const touch of e.changedTouches) {
-        if (touch.identifier === originRef.current.id) {
-          originRef.current = null;
-          setActive(false);
-          setKnobOffset({ x: 0, y: 0 });
-          releaseAll();
-        }
-      }
+  const onPointerEnd = useCallback(
+    (event) => {
+      if (pointerRef.current?.id !== event.pointerId) return;
+      event.preventDefault();
+      reset();
     },
-    [releaseAll],
+    [reset],
   );
 
-  const size = RADIUS * 2;
+  const upStrength = Math.max(0, control.move);
+  const downStrength = Math.max(0, -control.move);
+  const leftStrength = Math.max(0, control.turn);
+  const rightStrength = Math.max(0, -control.turn);
+
+  const arrowStyle = (strength) => ({
+    ...styles.arrow,
+    opacity: strength > 0 ? 0.65 + strength * 0.35 : 0.3,
+    color: strength > 0 ? "#fff4df" : "rgba(255,255,255,0.72)",
+    textShadow: strength > 0 ? "0 0 12px rgba(255,126,60,0.95)" : "none",
+    transform: `scale(${strength > 0 ? 1.08 : 1})`,
+  });
 
   return (
     <div
-      style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        zIndex: 60,
-        touchAction: "none",
-      }}
+      aria-label="Movement joystick"
+      data-testid="touch-joystick"
+      role="application"
+      style={styles.positioner}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd}
+      onContextMenu={(event) => event.preventDefault()}
     >
       <div
         style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.1)",
-          border: "2px solid rgba(255,255,255,0.2)",
-          position: "relative",
+          ...styles.base,
+          borderColor: active
+            ? "rgba(255,167,112,0.58)"
+            : "rgba(255,255,255,0.24)",
+          background: active ? "rgba(19,20,31,0.66)" : "rgba(15,16,27,0.52)",
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
       >
+        <span style={{ ...arrowStyle(upStrength), ...styles.up }}>▲</span>
+        <span style={{ ...arrowStyle(downStrength), ...styles.down }}>▼</span>
+        <span style={{ ...arrowStyle(leftStrength), ...styles.left }}>◀</span>
+        <span style={{ ...arrowStyle(rightStrength), ...styles.right }}>▶</span>
         <div
           style={{
-            width: KNOB,
-            height: KNOB,
-            borderRadius: "50%",
+            ...styles.knob,
             background: active
-              ? "rgba(255,255,255,0.45)"
-              : "rgba(255,255,255,0.25)",
-            border: "2px solid rgba(255,255,255,0.4)",
-            position: "absolute",
-            top: "50%",
-            left: "50%",
+              ? "linear-gradient(145deg, #ffad72, #f35d2c)"
+              : "linear-gradient(145deg, #f5f6fa, #aeb4c3)",
+            boxShadow: active
+              ? "0 5px 18px rgba(255,91,39,0.5), inset 0 1px 1px rgba(255,255,255,0.5)"
+              : "0 5px 16px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.65)",
             transform: `translate(calc(-50% + ${knobOffset.x}px), calc(-50% + ${knobOffset.y}px))`,
-            transition: active ? "none" : "transform 0.15s ease-out",
-            pointerEvents: "none",
+            transition: active ? "none" : "transform 140ms ease-out",
           }}
-        />
+        >
+          <div style={styles.knobGrip} />
+        </div>
       </div>
     </div>
   );
 }
+
+const styles = {
+  positioner: {
+    position: "fixed",
+    right: "max(0px, env(safe-area-inset-right))",
+    bottom: "max(0px, env(safe-area-inset-bottom))",
+    zIndex: 210,
+    width: HIT_SIZE,
+    height: HIT_SIZE,
+    touchAction: "none",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitTouchCallout: "none",
+  },
+  base: {
+    width: BASE_SIZE,
+    height: BASE_SIZE,
+    borderRadius: "50%",
+    border: "2px solid",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    touchAction: "none",
+    boxShadow:
+      "0 9px 28px rgba(0,0,0,0.35), inset 0 0 30px rgba(255,255,255,0.035)",
+    transition: "background 120ms ease, border-color 120ms ease",
+    overflow: "hidden",
+  },
+  knob: {
+    width: KNOB_SIZE,
+    height: KNOB_SIZE,
+    borderRadius: "50%",
+    border: "2px solid rgba(255,255,255,0.58)",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    pointerEvents: "none",
+    display: "grid",
+    placeItems: "center",
+  },
+  knobGrip: {
+    width: 17,
+    height: 17,
+    borderRadius: "50%",
+    border: "2px solid rgba(30,31,42,0.28)",
+  },
+  arrow: {
+    position: "absolute",
+    fontSize: 13,
+    lineHeight: 1,
+    pointerEvents: "none",
+    transition: "opacity 100ms ease, color 100ms ease, transform 100ms ease",
+  },
+  up: { top: 7, left: "50%", marginLeft: -6.5 },
+  down: { bottom: 7, left: "50%", marginLeft: -6.5 },
+  left: { left: 7, top: "50%", marginTop: -6.5 },
+  right: { right: 7, top: "50%", marginTop: -6.5 },
+};
